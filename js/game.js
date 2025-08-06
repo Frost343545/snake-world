@@ -123,12 +123,20 @@ class GameEngine {
         // Инициализируем начальные сегменты змеи
         if (!playerData.segments || playerData.segments.length === 0) {
             playerData.segments = [];
-            // Создаем начальные сегменты змеи
+            // Создаем начальные сегменты змеи (все в одной точке для начала)
             for (let i = 0; i < 3; i++) {
                 playerData.segments.push({
-                    x: playerData.x - i * 20,
+                    x: playerData.x,
                     y: playerData.y
                 });
+            }
+            
+            // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
+            for (const segment of playerData.segments) {
+                if (segment.x < 0) segment.x = 0;
+                if (segment.y < 0) segment.y = 0;
+                if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+                if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
             }
         }
         
