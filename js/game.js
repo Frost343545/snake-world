@@ -140,6 +140,8 @@ class GameEngine {
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
         console.log('Player segments:', playerData.segments.length);
         console.log('Player position:', playerData.x, playerData.y);
+        console.log('Player ID set to:', this.playerId);
+        console.log('Player in collection with ID:', playerData.id);
         
         // Отправляем данные игрока на сервер
         window.webSocketManager.sendPlayerJoin(playerData);
@@ -211,6 +213,10 @@ class GameEngine {
             this.updatePlayer(player, deltaTime);
         } else {
             console.warn('Player not found in collection, playerId:', this.playerId);
+            console.log('Available players in collection:');
+            for (const [id, p] of this.players) {
+                console.log('  -', id, ':', p.name);
+            }
         }
         
         // Обновляем частицы
@@ -639,9 +645,11 @@ class GameEngine {
     updateGameState(data) {
         // Обновляем состояние игры с сервера
         if (data.players) {
+            console.log('Updating game state with players:', data.players.length);
             this.players.clear();
             for (const playerData of data.players) {
                 this.players.set(playerData.id, playerData);
+                console.log('Added player to collection:', playerData.id, playerData.name);
             }
         }
         
