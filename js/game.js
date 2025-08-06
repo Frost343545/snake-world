@@ -48,9 +48,6 @@ class GameEngine {
         this.canvas.height = window.innerHeight;
         this.centerX = this.canvas.width / 2;
         this.centerY = this.canvas.height / 2;
-        
-        console.log('Canvas resized:', this.canvas.width, 'x', this.canvas.height);
-        console.log('Center:', this.centerX, this.centerY);
     }
 
     createBackgroundPattern() {
@@ -77,7 +74,6 @@ class GameEngine {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
-            console.log('Mouse position:', this.mouse.x, this.mouse.y);
         });
 
         // Обработка клавиатуры
@@ -209,7 +205,6 @@ class GameEngine {
         // Обновляем игрока
         const player = this.players.get(this.playerId);
         if (player) {
-            console.log('Updating player:', player.name, 'position:', player.x, player.y);
             this.updatePlayer(player, deltaTime);
         } else {
             console.warn('Player not found in collection, playerId:', this.playerId);
@@ -235,8 +230,6 @@ class GameEngine {
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        console.log('Mouse world pos:', worldMouseX, worldMouseY, 'Player pos:', player.x, player.y, 'Distance:', distance);
-        
         if (distance > 0) {
             const speed = player.boost ? 200 : 100; // пикселей в секунду
             const moveDistance = (speed * deltaTime) / 1000;
@@ -248,8 +241,6 @@ class GameEngine {
                 player.x = worldMouseX;
                 player.y = worldMouseY;
             }
-            
-            console.log('Player moved to:', player.x, player.y);
         }
         
         // Обновляем сегменты змеи
@@ -510,9 +501,6 @@ class GameEngine {
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(0, 0, this.worldSize.width, this.worldSize.height);
-        
-        // Добавляем отладочную информацию
-        console.log('Background rendered, world size:', this.worldSize.width, 'x', this.worldSize.height);
     }
 
     renderFoods() {
@@ -543,20 +531,13 @@ class GameEngine {
     }
 
     renderPlayers() {
-        console.log('Rendering players, total:', this.players.size);
         for (const player of this.players.values()) {
-            console.log('Player to render:', player.id, player.name, 'segments:', player.segments ? player.segments.length : 'undefined');
             this.renderPlayer(player);
         }
     }
 
     renderPlayer(player) {
         this.ctx.save();
-        
-        // Отладочная информация
-        if (player.id === this.playerId) {
-            console.log('Rendering player:', player.name, 'segments:', player.segments.length, 'position:', player.x, player.y);
-        }
         
         // Рендерим сегменты змеи
         for (let i = player.segments.length - 1; i >= 0; i--) {
@@ -645,11 +626,9 @@ class GameEngine {
     updateGameState(data) {
         // Обновляем состояние игры с сервера
         if (data.players) {
-            console.log('Updating game state with players:', data.players.length);
             this.players.clear();
             for (const playerData of data.players) {
                 this.players.set(playerData.id, playerData);
-                console.log('Added player to collection:', playerData.id, playerData.name);
             }
         }
         
