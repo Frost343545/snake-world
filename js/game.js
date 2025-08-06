@@ -74,7 +74,6 @@ class GameEngine {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
-            console.log('Mouse moved to:', this.mouse.x, this.mouse.y);
         });
 
         // Обработка клавиатуры
@@ -136,13 +135,6 @@ class GameEngine {
         // Устанавливаем камеру на игрока
         this.camera.x = playerData.x - this.centerX / this.camera.zoom;
         this.camera.y = playerData.y - this.centerY / this.camera.zoom;
-        
-        // Дополнительная проверка - если камера слишком далеко, сбрасываем в центр
-        if (Math.abs(this.camera.x) > 1000 || Math.abs(this.camera.y) > 1000) {
-            console.warn('Camera too far, resetting to center');
-            this.camera.x = this.worldSize.width / 2 - this.centerX / this.camera.zoom;
-            this.camera.y = this.worldSize.height / 2 - this.centerY / this.camera.zoom;
-        }
         
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
@@ -235,44 +227,42 @@ class GameEngine {
     }
 
     updatePlayer(player, deltaTime) {
-        // Если мышь не двигалась, не обновляем позицию
-        if (this.mouse.x === 0 && this.mouse.y === 0) {
-            return;
-        }
+        // НОВАЯ ЛОГИКА: Змея всегда движется в сторону курсора
         
-        // Вычисляем направление к мыши в мировых координатах
+        // Получаем позицию курсора в мировых координатах
         const worldMouseX = (this.mouse.x - this.centerX) / this.camera.zoom + this.camera.x;
         const worldMouseY = (this.mouse.y - this.centerY) / this.camera.zoom + this.camera.y;
         
+        // Вычисляем направление к курсору
         const dx = worldMouseX - player.x;
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Добавляем отладку движения
-        console.log('Mouse screen pos:', this.mouse.x, this.mouse.y);
-        console.log('Mouse world pos:', worldMouseX, worldMouseY);
-        console.log('Player pos:', player.x, player.y);
-        console.log('Distance:', distance);
-        
-        // Ограничиваем максимальное расстояние для предотвращения скачков
-        const maxDistance = 1000;
-        if (distance > maxDistance) {
-            console.warn('Distance too large, resetting player position');
-            player.x = worldMouseX;
-            player.y = worldMouseY;
-        } else if (distance > 5) { // Уменьшаем минимальное расстояние для движения
-            const speed = player.boost ? 400 : 200; // Увеличиваем скорость в 2 раза
+        // Если курсор не двигался, используем последнее направление или движение вправо
+        if (distance === 0) {
+            // Двигаемся вправо по умолчанию
+            const speed = player.boost ? 300 : 150;
+            const moveDistance = (speed * deltaTime) / 1000;
+            player.x += moveDistance;
+        } else {
+            // Нормализуем вектор направления
+            const dirX = dx / distance;
+            const dirY = dy / distance;
+            
+            // Вычисляем скорость движения
+            const speed = player.boost ? 300 : 150; // пикселей в секунду
             const moveDistance = (speed * deltaTime) / 1000;
             
-            if (distance > moveDistance) {
-                player.x += (dx / distance) * moveDistance;
-                player.y += (dy / distance) * moveDistance;
-                console.log('Player moved to:', player.x, player.y);
-            } else {
-                player.x = worldMouseX;
-                player.y = worldMouseY;
-            }
+            // Двигаем игрока в направлении курсора
+            player.x += dirX * moveDistance;
+            player.y += dirY * moveDistance;
+            
+            console.log('Player moving:', player.x.toFixed(2), player.y.toFixed(2), 'towards:', worldMouseX.toFixed(2), worldMouseY.toFixed(2));
         }
+        
+        // Ограничиваем игрока в пределах мира
+        player.x = Math.max(player.radius, Math.min(this.worldSize.width - player.radius, player.x));
+        player.y = Math.max(player.radius, Math.min(this.worldSize.height - player.radius, player.y));
         
         // Обновляем сегменты змеи
         this.updateSnakeSegments(player);
@@ -460,13 +450,6 @@ class GameEngine {
         const cameraSpeed = 0.1;
         this.camera.x += (clampedTargetX - this.camera.x) * cameraSpeed;
         this.camera.y += (clampedTargetY - this.camera.y) * cameraSpeed;
-        
-        // Дополнительная проверка на разумные значения
-        if (Math.abs(this.camera.x) > 10000 || Math.abs(this.camera.y) > 10000) {
-            console.warn('Camera position too large, resetting to player');
-            this.camera.x = player.x - this.centerX / this.camera.zoom;
-            this.camera.y = player.y - this.centerY / this.camera.zoom;
-        }
     }
 
     updateUI() {
@@ -531,9 +514,6 @@ class GameEngine {
         
         // Восстанавливаем контекст
         this.ctx.restore();
-        
-        // Добавляем отладку рендеринга
-        console.log('Render completed - Players:', this.players.size, 'Camera:', this.camera.x, this.camera.y, 'Player ID:', this.playerId);
     }
 
     renderBackground() {
@@ -581,9 +561,7 @@ class GameEngine {
     }
 
     renderPlayers() {
-        console.log('Rendering players, count:', this.players.size);
         for (const player of this.players.values()) {
-            console.log('Rendering player:', player.id, player.name, 'at position:', player.x, player.y);
             this.renderPlayer(player);
         }
     }
@@ -676,34 +654,20 @@ class GameEngine {
 
     // Методы для работы с сервером
     updateGameState(data) {
-        console.log('updateGameState called with:', data);
-        
         // Обновляем состояние игры с сервера
         if (data.players) {
-            console.log('Updating players, count:', data.players.length);
             // Сохраняем текущего игрока перед очисткой
             const currentPlayer = this.players.get(this.playerId);
-            console.log('Current player before update:', currentPlayer ? currentPlayer.name : 'none');
             
             this.players.clear();
             for (const playerData of data.players) {
-                // Проверяем и исправляем неразумные координаты
-                if (Math.abs(playerData.x) > 10000 || Math.abs(playerData.y) > 10000) {
-                    console.warn('Player coordinates too large, resetting to center');
-                    playerData.x = this.worldSize.width / 2;
-                    playerData.y = this.worldSize.height / 2;
-                }
-                
                 this.players.set(playerData.id, playerData);
-                console.log('Added player to collection:', playerData.id, playerData.name, 'at', playerData.x, playerData.y);
                 
                 // Если это наш игрок, обновляем playerId
                 if (currentPlayer && playerData.name === currentPlayer.name) {
                     this.playerId = playerData.id;
-                    console.log('Player ID updated from', currentPlayer.id, 'to', playerData.id);
                 }
             }
-            console.log('Final player collection size:', this.players.size);
         }
         
         if (data.foods) {
