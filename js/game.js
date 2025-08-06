@@ -136,6 +136,13 @@ class GameEngine {
         this.camera.x = playerData.x - this.centerX / this.camera.zoom;
         this.camera.y = playerData.y - this.centerY / this.camera.zoom;
         
+        // Дополнительная проверка - если камера слишком далеко, сбрасываем в центр
+        if (Math.abs(this.camera.x) > 1000 || Math.abs(this.camera.y) > 1000) {
+            console.warn('Camera too far, resetting to center');
+            this.camera.x = this.worldSize.width / 2 - this.centerX / this.camera.zoom;
+            this.camera.y = this.worldSize.height / 2 - this.centerY / this.camera.zoom;
+        }
+        
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
         console.log('Player segments:', playerData.segments.length);
