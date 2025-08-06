@@ -74,8 +74,10 @@ class GameEngine {
     setupEventListeners() {
         // Обработка мыши
         this.canvas.addEventListener('mousemove', (e) => {
-            this.mouse.x = e.clientX;
-            this.mouse.y = e.clientY;
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouse.x = e.clientX - rect.left;
+            this.mouse.y = e.clientY - rect.top;
+            console.log('Mouse position:', this.mouse.x, this.mouse.y);
         });
 
         // Обработка клавиатуры
@@ -92,15 +94,17 @@ class GameEngine {
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            this.mouse.x = touch.clientX;
-            this.mouse.y = touch.clientY;
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouse.x = touch.clientX - rect.left;
+            this.mouse.y = touch.clientY - rect.top;
         });
 
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            this.mouse.x = touch.clientX;
-            this.mouse.y = touch.clientY;
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouse.x = touch.clientX - rect.left;
+            this.mouse.y = touch.clientY - rect.top;
         });
     }
 
@@ -112,11 +116,30 @@ class GameEngine {
         this.gameStartTime = Date.now();
         this.lastUpdateTime = Date.now();
         
+        // Инициализируем начальные сегменты змеи
+        if (!playerData.segments || playerData.segments.length === 0) {
+            playerData.segments = [];
+            // Создаем начальные сегменты змеи
+            for (let i = 0; i < 3; i++) {
+                playerData.segments.push({
+                    x: playerData.x - i * 20,
+                    y: playerData.y
+                });
+            }
+        }
+        
+        // Устанавливаем начальный радиус если его нет
+        if (!playerData.radius) {
+            playerData.radius = 15;
+        }
+        
         // Добавляем игрока в коллекцию
         this.players.set(playerData.id, playerData);
         
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
+        console.log('Player segments:', playerData.segments.length);
+        console.log('Player position:', playerData.x, playerData.y);
         
         // Отправляем данные игрока на сервер
         window.webSocketManager.sendPlayerJoin(playerData);
@@ -514,6 +537,11 @@ class GameEngine {
 
     renderPlayer(player) {
         this.ctx.save();
+        
+        // Отладочная информация
+        if (player.id === this.playerId) {
+            console.log('Rendering player:', player.name, 'segments:', player.segments.length, 'position:', player.x, player.y);
+        }
         
         // Рендерим сегменты змеи
         for (let i = player.segments.length - 1; i >= 0; i--) {
