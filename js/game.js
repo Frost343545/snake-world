@@ -133,6 +133,20 @@ class GameEngine {
         }
     }
 
+    pause() {
+        this.isPaused = true;
+        if (window.uiManager) {
+            window.uiManager.showScreen('pause');
+        }
+    }
+
+    resume() {
+        this.isPaused = false;
+        if (window.uiManager) {
+            window.uiManager.showScreen('game');
+        }
+    }
+
     startGameLoop() {
         const gameLoop = (timestamp) => {
             if (!this.lastUpdateTime) {
