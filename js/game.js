@@ -492,6 +492,9 @@ class GameEngine {
         
         // Восстанавливаем контекст
         this.ctx.restore();
+        
+        // Добавляем отладку рендеринга
+        console.log('Render completed - Players:', this.players.size, 'Camera:', this.camera.x, this.camera.y, 'Player ID:', this.playerId);
     }
 
     renderBackground() {
@@ -539,7 +542,9 @@ class GameEngine {
     }
 
     renderPlayers() {
+        console.log('Rendering players, count:', this.players.size);
         for (const player of this.players.values()) {
+            console.log('Rendering player:', player.id, player.name, 'at position:', player.x, player.y);
             this.renderPlayer(player);
         }
     }
@@ -632,14 +637,19 @@ class GameEngine {
 
     // Методы для работы с сервером
     updateGameState(data) {
+        console.log('updateGameState called with:', data);
+        
         // Обновляем состояние игры с сервера
         if (data.players) {
+            console.log('Updating players, count:', data.players.length);
             // Сохраняем текущего игрока перед очисткой
             const currentPlayer = this.players.get(this.playerId);
+            console.log('Current player before update:', currentPlayer ? currentPlayer.name : 'none');
             
             this.players.clear();
             for (const playerData of data.players) {
                 this.players.set(playerData.id, playerData);
+                console.log('Added player to collection:', playerData.id, playerData.name, 'at', playerData.x, playerData.y);
                 
                 // Если это наш игрок, обновляем playerId
                 if (currentPlayer && playerData.name === currentPlayer.name) {
@@ -647,6 +657,7 @@ class GameEngine {
                     console.log('Player ID updated from', currentPlayer.id, 'to', playerData.id);
                 }
             }
+            console.log('Final player collection size:', this.players.size);
         }
         
         if (data.foods) {
