@@ -260,8 +260,8 @@ class GameEngine {
             console.warn('Distance too large, resetting player position');
             player.x = worldMouseX;
             player.y = worldMouseY;
-        } else if (distance > 10) { // Увеличиваем минимальное расстояние для движения
-            const speed = player.boost ? 200 : 100; // пикселей в секунду
+        } else if (distance > 5) { // Уменьшаем минимальное расстояние для движения
+            const speed = player.boost ? 400 : 200; // Увеличиваем скорость в 2 раза
             const moveDistance = (speed * deltaTime) / 1000;
             
             if (distance > moveDistance) {
