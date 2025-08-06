@@ -626,9 +626,18 @@ class GameEngine {
     updateGameState(data) {
         // Обновляем состояние игры с сервера
         if (data.players) {
+            // Сохраняем текущего игрока перед очисткой
+            const currentPlayer = this.players.get(this.playerId);
+            
             this.players.clear();
             for (const playerData of data.players) {
                 this.players.set(playerData.id, playerData);
+                
+                // Если это наш игрок, обновляем playerId
+                if (currentPlayer && playerData.name === currentPlayer.name) {
+                    this.playerId = playerData.id;
+                    console.log('Player ID updated from', currentPlayer.id, 'to', playerData.id);
+                }
             }
         }
         
