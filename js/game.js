@@ -74,7 +74,6 @@ class GameEngine {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
-            console.log('Мышь движется на экране:', this.mouse.x, this.mouse.y);
         });
 
         // Обработка клавиатуры
@@ -113,6 +112,14 @@ class GameEngine {
         this.gameStartTime = Date.now();
         this.lastUpdateTime = Date.now();
         
+        // ИСПРАВЛЕНИЕ: Устанавливаем игрока в центр мира если координаты некорректные
+        if (playerData.x < 0 || playerData.x > this.worldSize.width || 
+            playerData.y < 0 || playerData.y > this.worldSize.height) {
+            console.log('Исправляем позицию игрока - устанавливаем в центр мира');
+            playerData.x = this.worldSize.width / 2;
+            playerData.y = this.worldSize.height / 2;
+        }
+        
         // Инициализируем начальные сегменты змеи
         if (!playerData.segments || playerData.segments.length === 0) {
             playerData.segments = [];
@@ -133,7 +140,7 @@ class GameEngine {
         // Добавляем игрока в коллекцию
         this.players.set(playerData.id, playerData);
         
-        // Устанавливаем камеру на игрока (центрируем)
+        // ИСПРАВЛЕНИЕ: Правильно устанавливаем камеру на игрока
         this.camera.x = playerData.x - this.centerX / this.camera.zoom;
         this.camera.y = playerData.y - this.centerY / this.camera.zoom;
         
@@ -144,6 +151,10 @@ class GameEngine {
         this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
         this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
         
+        // ИСПРАВЛЕНИЕ: Сбрасываем позицию мыши
+        this.mouse.x = this.centerX;
+        this.mouse.y = this.centerY;
+        
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
         console.log('Player segments:', playerData.segments.length);
@@ -151,6 +162,7 @@ class GameEngine {
         console.log('Player ID set to:', this.playerId);
         console.log('Player in collection with ID:', playerData.id);
         console.log('Camera set to:', this.camera.x, this.camera.y);
+        console.log('Mouse reset to center:', this.mouse.x, this.mouse.y);
         
         // Отправляем данные игрока на сервер
         window.webSocketManager.sendPlayerJoin(playerData);
@@ -241,30 +253,19 @@ class GameEngine {
         const worldMouseX = (this.mouse.x - this.centerX) / this.camera.zoom + this.camera.x;
         const worldMouseY = (this.mouse.y - this.centerY) / this.camera.zoom + this.camera.y;
         
-        // Добавляем отладочную информацию
-        console.log('=== ДВИЖЕНИЕ ЗМЕИ ===');
-        console.log('Мышь на экране:', this.mouse.x, this.mouse.y);
-        console.log('Мышь в мире:', worldMouseX.toFixed(2), worldMouseY.toFixed(2));
-        console.log('Позиция игрока:', player.x.toFixed(2), player.y.toFixed(2));
-        console.log('Камера:', this.camera.x.toFixed(2), this.camera.y.toFixed(2));
-        
         // Вычисляем направление к курсору
         const dx = worldMouseX - player.x;
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        console.log('Расстояние до курсора:', distance.toFixed(2));
-        
-        // Проверяем, что мышь действительно двигалась
-        if (this.mouse.x === 0 && this.mouse.y === 0) {
-            console.log('Мышь не двигалась, игрок стоит на месте');
-            return; // Не двигаем игрока, если мышь не двигалась
+        // ИСПРАВЛЕНИЕ: Проверяем, что мышь действительно двигалась и не в центре
+        if (this.mouse.x === this.centerX && this.mouse.y === this.centerY) {
+            return; // Не двигаем игрока, если мышь в центре (не двигалась)
         }
         
-        // Если курсор слишком близко, не двигаемся
-        if (distance < 5) {
-            console.log('Курсор слишком близко, игрок стоит на месте');
-            return;
+        // ИСПРАВЛЕНИЕ: Увеличиваем минимальное расстояние для движения
+        if (distance < 10) {
+            return; // Не двигаемся, если курсор слишком близко
         }
         
         // Нормализуем вектор направления
@@ -276,13 +277,8 @@ class GameEngine {
         const moveDistance = (speed * deltaTime) / 1000;
         
         // Двигаем игрока в направлении курсора
-        const oldX = player.x;
-        const oldY = player.y;
-        
         player.x += dirX * moveDistance;
         player.y += dirY * moveDistance;
-        
-        console.log('Игрок двинулся с', oldX.toFixed(2), oldY.toFixed(2), 'на', player.x.toFixed(2), player.y.toFixed(2));
         
         // Ограничиваем игрока в пределах мира
         player.x = Math.max(player.radius, Math.min(this.worldSize.width - player.radius, player.x));
