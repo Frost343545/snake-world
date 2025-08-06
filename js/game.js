@@ -258,8 +258,8 @@ class GameEngine {
         // ИСПРАВЛЕННАЯ ЛОГИКА: Убираем дёргание змеи
         
         // Получаем позицию курсора в мировых координатах
-        const worldMouseX = (this.mouse.x - this.centerX) / this.camera.zoom + this.camera.x;
-        const worldMouseY = (this.mouse.y - this.centerY) / this.camera.zoom + this.camera.y;
+        const worldMouseX = this.mouse.x + this.camera.x;
+        const worldMouseY = this.mouse.y + this.camera.y;
         
         // Вычисляем направление к курсору
         const dx = worldMouseX - player.x;
@@ -463,22 +463,24 @@ class GameEngine {
     }
 
     updateCamera(player) {
-        // ПЛАВНАЯ КАМЕРА: Убираем тряску
-        // Вычисляем целевую позицию камеры
-        const targetX = player.x - this.centerX / this.camera.zoom;
-        const targetY = player.y - this.centerY / this.camera.zoom;
+        // ИСПРАВЛЕНИЕ: Упрощенная логика камеры
+        // Вычисляем целевую позицию камеры (центрируем игрока на экране)
+        const targetX = player.x - this.centerX;
+        const targetY = player.y - this.centerY;
         
-        // Ограничиваем целевую позицию в пределах мира
-        const maxX = this.worldSize.width - this.centerX / this.camera.zoom;
-        const maxY = this.worldSize.height - this.centerY / this.camera.zoom;
+        // Ограничиваем камеру в пределах мира
+        const maxX = this.worldSize.width - this.canvas.width;
+        const maxY = this.worldSize.height - this.canvas.height;
         
         const clampedTargetX = Math.max(0, Math.min(maxX, targetX));
         const clampedTargetY = Math.max(0, Math.min(maxY, targetY));
         
-        // Плавное следование камеры (убираем тряску)
-        const cameraSpeed = 0.15; // Увеличиваем скорость для более плавного движения
+        // Плавное следование камеры
+        const cameraSpeed = 0.1;
         this.camera.x += (clampedTargetX - this.camera.x) * cameraSpeed;
         this.camera.y += (clampedTargetY - this.camera.y) * cameraSpeed;
+        
+        console.log('Camera update - Player:', player.x, player.y, 'Target:', clampedTargetX, clampedTargetY, 'Camera:', this.camera.x, this.camera.y);
     }
 
     updateUI() {
@@ -524,9 +526,7 @@ class GameEngine {
         // Сохраняем контекст
         this.ctx.save();
         
-        // Применяем трансформации камеры
-        this.ctx.translate(this.centerX, this.centerY);
-        this.ctx.scale(this.camera.zoom, this.camera.zoom);
+        // Применяем трансформации камеры (упрощенная версия)
         this.ctx.translate(-this.camera.x, -this.camera.y);
         
         // Рендерим фон
@@ -601,8 +601,8 @@ class GameEngine {
             console.log('Камера:', this.camera.x, this.camera.y);
             
             // Проверяем, находится ли игрок в видимой области
-            const screenX = (player.x - this.camera.x) * this.camera.zoom + this.centerX;
-            const screenY = (player.y - this.camera.y) * this.camera.zoom + this.centerY;
+            const screenX = player.x - this.camera.x;
+            const screenY = player.y - this.camera.y;
             console.log('Позиция на экране:', screenX, screenY);
             console.log('Размеры экрана:', this.canvas.width, this.canvas.height);
             
