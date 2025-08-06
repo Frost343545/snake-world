@@ -207,7 +207,10 @@ class GameEngine {
         // Обновляем игрока
         const player = this.players.get(this.playerId);
         if (player) {
+            console.log('Updating player:', player.name, 'position:', player.x, player.y);
             this.updatePlayer(player, deltaTime);
+        } else {
+            console.warn('Player not found in collection, playerId:', this.playerId);
         }
         
         // Обновляем частицы
@@ -226,6 +229,8 @@ class GameEngine {
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
+        console.log('Mouse world pos:', worldMouseX, worldMouseY, 'Player pos:', player.x, player.y, 'Distance:', distance);
+        
         if (distance > 0) {
             const speed = player.boost ? 200 : 100; // пикселей в секунду
             const moveDistance = (speed * deltaTime) / 1000;
@@ -237,6 +242,8 @@ class GameEngine {
                 player.x = worldMouseX;
                 player.y = worldMouseY;
             }
+            
+            console.log('Player moved to:', player.x, player.y);
         }
         
         // Обновляем сегменты змеи
@@ -530,7 +537,9 @@ class GameEngine {
     }
 
     renderPlayers() {
+        console.log('Rendering players, total:', this.players.size);
         for (const player of this.players.values()) {
+            console.log('Player to render:', player.id, player.name, 'segments:', player.segments ? player.segments.length : 'undefined');
             this.renderPlayer(player);
         }
     }
