@@ -132,9 +132,16 @@ class GameEngine {
         // Добавляем игрока в коллекцию
         this.players.set(playerData.id, playerData);
         
-        // Устанавливаем камеру на игрока
+        // Устанавливаем камеру на игрока (центрируем)
         this.camera.x = playerData.x - this.centerX / this.camera.zoom;
         this.camera.y = playerData.y - this.centerY / this.camera.zoom;
+        
+        // Ограничиваем камеру в пределах мира при инициализации
+        const maxX = this.worldSize.width - this.centerX / this.camera.zoom;
+        const maxY = this.worldSize.height - this.centerY / this.camera.zoom;
+        
+        this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
+        this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
         
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
@@ -435,21 +442,19 @@ class GameEngine {
     }
 
     updateCamera(player) {
-        // Плавно следуем за игроком
-        const targetX = player.x - this.centerX / this.camera.zoom;
-        const targetY = player.y - this.centerY / this.camera.zoom;
+        // НОВАЯ ЛОГИКА: Камера всегда центрирована на игроке
+        // Вычисляем позицию камеры так, чтобы игрок был в центре экрана
+        this.camera.x = player.x - this.centerX / this.camera.zoom;
+        this.camera.y = player.y - this.centerY / this.camera.zoom;
         
         // Ограничиваем камеру в пределах мира
         const maxX = this.worldSize.width - this.centerX / this.camera.zoom;
         const maxY = this.worldSize.height - this.centerY / this.camera.zoom;
         
-        const clampedTargetX = Math.max(0, Math.min(maxX, targetX));
-        const clampedTargetY = Math.max(0, Math.min(maxY, targetY));
+        this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
+        this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
         
-        // Плавное следование с ограничением скорости
-        const cameraSpeed = 0.1;
-        this.camera.x += (clampedTargetX - this.camera.x) * cameraSpeed;
-        this.camera.y += (clampedTargetY - this.camera.y) * cameraSpeed;
+        console.log('Camera centered on player:', this.camera.x.toFixed(2), this.camera.y.toFixed(2));
     }
 
     updateUI() {
