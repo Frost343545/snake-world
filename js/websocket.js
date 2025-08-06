@@ -186,8 +186,10 @@ class WebSocketManager {
     }
 
     handleLeaderboard(data) {
-        if (window.uiManager) {
+        if (window.uiManager && typeof window.uiManager.updateLeaderboard === 'function') {
             window.uiManager.updateLeaderboard(data.players);
+        } else {
+            console.warn('uiManager.updateLeaderboard не найден:', window.uiManager);
         }
     }
 
