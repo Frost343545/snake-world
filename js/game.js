@@ -263,8 +263,6 @@ class GameEngine {
             // Двигаем игрока в направлении курсора
             player.x += dirX * moveDistance;
             player.y += dirY * moveDistance;
-            
-            console.log('Player moving:', player.x.toFixed(2), player.y.toFixed(2), 'towards:', worldMouseX.toFixed(2), worldMouseY.toFixed(2));
         }
         
         // Ограничиваем игрока в пределах мира
@@ -442,19 +440,22 @@ class GameEngine {
     }
 
     updateCamera(player) {
-        // НОВАЯ ЛОГИКА: Камера всегда центрирована на игроке
-        // Вычисляем позицию камеры так, чтобы игрок был в центре экрана
-        this.camera.x = player.x - this.centerX / this.camera.zoom;
-        this.camera.y = player.y - this.centerY / this.camera.zoom;
+        // ПЛАВНАЯ КАМЕРА: Убираем тряску
+        // Вычисляем целевую позицию камеры
+        const targetX = player.x - this.centerX / this.camera.zoom;
+        const targetY = player.y - this.centerY / this.camera.zoom;
         
-        // Ограничиваем камеру в пределах мира
+        // Ограничиваем целевую позицию в пределах мира
         const maxX = this.worldSize.width - this.centerX / this.camera.zoom;
         const maxY = this.worldSize.height - this.centerY / this.camera.zoom;
         
-        this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
-        this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
+        const clampedTargetX = Math.max(0, Math.min(maxX, targetX));
+        const clampedTargetY = Math.max(0, Math.min(maxY, targetY));
         
-        console.log('Camera centered on player:', this.camera.x.toFixed(2), this.camera.y.toFixed(2));
+        // Плавное следование камеры (убираем тряску)
+        const cameraSpeed = 0.15; // Увеличиваем скорость для более плавного движения
+        this.camera.x += (clampedTargetX - this.camera.x) * cameraSpeed;
+        this.camera.y += (clampedTargetY - this.camera.y) * cameraSpeed;
     }
 
     updateUI() {
