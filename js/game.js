@@ -74,6 +74,7 @@ class GameEngine {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
+            console.log('Mouse moved to:', this.mouse.x, this.mouse.y);
         });
 
         // Обработка клавиатуры
@@ -234,6 +235,11 @@ class GameEngine {
     }
 
     updatePlayer(player, deltaTime) {
+        // Если мышь не двигалась, не обновляем позицию
+        if (this.mouse.x === 0 && this.mouse.y === 0) {
+            return;
+        }
+        
         // Вычисляем направление к мыши в мировых координатах
         const worldMouseX = (this.mouse.x - this.centerX) / this.camera.zoom + this.camera.x;
         const worldMouseY = (this.mouse.y - this.centerY) / this.camera.zoom + this.camera.y;
@@ -242,19 +248,26 @@ class GameEngine {
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
+        // Добавляем отладку движения
+        console.log('Mouse screen pos:', this.mouse.x, this.mouse.y);
+        console.log('Mouse world pos:', worldMouseX, worldMouseY);
+        console.log('Player pos:', player.x, player.y);
+        console.log('Distance:', distance);
+        
         // Ограничиваем максимальное расстояние для предотвращения скачков
         const maxDistance = 1000;
         if (distance > maxDistance) {
             console.warn('Distance too large, resetting player position');
             player.x = worldMouseX;
             player.y = worldMouseY;
-        } else if (distance > 5) { // Минимальное расстояние для движения
+        } else if (distance > 10) { // Увеличиваем минимальное расстояние для движения
             const speed = player.boost ? 200 : 100; // пикселей в секунду
             const moveDistance = (speed * deltaTime) / 1000;
             
             if (distance > moveDistance) {
                 player.x += (dx / distance) * moveDistance;
                 player.y += (dy / distance) * moveDistance;
+                console.log('Player moved to:', player.x, player.y);
             } else {
                 player.x = worldMouseX;
                 player.y = worldMouseY;
