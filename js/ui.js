@@ -78,9 +78,9 @@ class UIManager {
             });
         }
 
-        const backToMenuFromPauseBtn = document.getElementById('backToMenuFromPauseBtn');
-        if (backToMenuFromPauseBtn) {
-            backToMenuFromPauseBtn.addEventListener('click', () => {
+        const quitGameBtn = document.getElementById('quitGameBtn');
+        if (quitGameBtn) {
+            quitGameBtn.addEventListener('click', () => {
                 this.backToMenuFromGame();
             });
         }
@@ -122,9 +122,9 @@ class UIManager {
             });
         }
 
-        const backToMenuFromGameOverBtn = document.getElementById('backToMenuFromGameOverBtn');
-        if (backToMenuFromGameOverBtn) {
-            backToMenuFromGameOverBtn.addEventListener('click', () => {
+        const backToMainBtn = document.getElementById('backToMainBtn');
+        if (backToMainBtn) {
+            backToMainBtn.addEventListener('click', () => {
                 this.backToMenuFromGameOver();
             });
         }

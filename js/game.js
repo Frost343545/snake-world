@@ -107,6 +107,9 @@ class GameEngine {
         this.gameStartTime = Date.now();
         this.lastUpdateTime = Date.now();
         
+        // Добавляем игрока в коллекцию
+        this.players.set(playerData.id, playerData);
+        
         // Отправляем данные игрока на сервер
         window.webSocketManager.sendPlayerJoin(playerData);
         
