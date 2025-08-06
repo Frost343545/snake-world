@@ -132,12 +132,17 @@ class GameEngine {
         // Добавляем игрока в коллекцию
         this.players.set(playerData.id, playerData);
         
+        // Устанавливаем камеру на игрока
+        this.camera.x = playerData.x - this.centerX / this.camera.zoom;
+        this.camera.y = playerData.y - this.centerY / this.camera.zoom;
+        
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
         console.log('Player segments:', playerData.segments.length);
         console.log('Player position:', playerData.x, playerData.y);
         console.log('Player ID set to:', this.playerId);
         console.log('Player in collection with ID:', playerData.id);
+        console.log('Camera set to:', this.camera.x, this.camera.y);
         
         // Отправляем данные игрока на сервер
         window.webSocketManager.sendPlayerJoin(playerData);
@@ -230,7 +235,8 @@ class GameEngine {
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance > 0) {
+        // Добавляем отладку движения
+        if (distance > 5) { // Минимальное расстояние для движения
             const speed = player.boost ? 200 : 100; // пикселей в секунду
             const moveDistance = (speed * deltaTime) / 1000;
             
@@ -241,6 +247,8 @@ class GameEngine {
                 player.x = worldMouseX;
                 player.y = worldMouseY;
             }
+            
+            console.log('Player moving:', player.x, player.y, 'Distance:', distance, 'Mouse:', worldMouseX, worldMouseY);
         }
         
         // Обновляем сегменты змеи
