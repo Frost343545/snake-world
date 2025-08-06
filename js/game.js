@@ -48,6 +48,9 @@ class GameEngine {
         this.canvas.height = window.innerHeight;
         this.centerX = this.canvas.width / 2;
         this.centerY = this.canvas.height / 2;
+        
+        console.log('Canvas resized:', this.canvas.width, 'x', this.canvas.height);
+        console.log('Center:', this.centerX, this.centerY);
     }
 
     createBackgroundPattern() {
@@ -102,6 +105,8 @@ class GameEngine {
     }
 
     startGame(playerData) {
+        console.log('Starting game with player data:', playerData);
+        
         this.playerId = playerData.id;
         this.isPlaying = true;
         this.gameStartTime = Date.now();
@@ -109,6 +114,9 @@ class GameEngine {
         
         // Добавляем игрока в коллекцию
         this.players.set(playerData.id, playerData);
+        
+        console.log('Player added to collection, total players:', this.players.size);
+        console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
         
         // Отправляем данные игрока на сервер
         window.webSocketManager.sendPlayerJoin(playerData);
@@ -414,6 +422,17 @@ class GameEngine {
     }
 
     render() {
+        // Проверяем, что canvas существует и имеет размеры
+        if (!this.canvas || !this.ctx) {
+            console.error('Canvas or context not available');
+            return;
+        }
+        
+        if (this.canvas.width === 0 || this.canvas.height === 0) {
+            console.error('Canvas has zero dimensions');
+            return;
+        }
+        
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Сохраняем контекст
@@ -441,6 +460,12 @@ class GameEngine {
     }
 
     renderBackground() {
+        // Проверяем, что backgroundPattern существует
+        if (!this.backgroundPattern) {
+            console.warn('Background pattern not created, creating fallback');
+            this.createBackgroundPattern();
+        }
+        
         // Рендерим сетку
         this.ctx.fillStyle = this.backgroundPattern;
         this.ctx.fillRect(0, 0, this.worldSize.width, this.worldSize.height);
@@ -449,6 +474,9 @@ class GameEngine {
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(0, 0, this.worldSize.width, this.worldSize.height);
+        
+        // Добавляем отладочную информацию
+        console.log('Background rendered, world size:', this.worldSize.width, 'x', this.worldSize.height);
     }
 
     renderFoods() {
