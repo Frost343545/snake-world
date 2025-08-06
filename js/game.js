@@ -74,6 +74,7 @@ class GameEngine {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
+            console.log('Мышь движется на экране:', this.mouse.x, this.mouse.y);
         });
 
         // Обработка клавиатуры
@@ -234,36 +235,54 @@ class GameEngine {
     }
 
     updatePlayer(player, deltaTime) {
-        // НОВАЯ ЛОГИКА: Змея всегда движется в сторону курсора
+        // ИСПРАВЛЕННАЯ ЛОГИКА: Убираем дёргание змеи
         
         // Получаем позицию курсора в мировых координатах
         const worldMouseX = (this.mouse.x - this.centerX) / this.camera.zoom + this.camera.x;
         const worldMouseY = (this.mouse.y - this.centerY) / this.camera.zoom + this.camera.y;
+        
+        // Добавляем отладочную информацию
+        console.log('=== ДВИЖЕНИЕ ЗМЕИ ===');
+        console.log('Мышь на экране:', this.mouse.x, this.mouse.y);
+        console.log('Мышь в мире:', worldMouseX.toFixed(2), worldMouseY.toFixed(2));
+        console.log('Позиция игрока:', player.x.toFixed(2), player.y.toFixed(2));
+        console.log('Камера:', this.camera.x.toFixed(2), this.camera.y.toFixed(2));
         
         // Вычисляем направление к курсору
         const dx = worldMouseX - player.x;
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Если курсор не двигался, используем последнее направление или движение вправо
-        if (distance === 0) {
-            // Двигаемся вправо по умолчанию
-            const speed = player.boost ? 300 : 150;
-            const moveDistance = (speed * deltaTime) / 1000;
-            player.x += moveDistance;
-        } else {
-            // Нормализуем вектор направления
-            const dirX = dx / distance;
-            const dirY = dy / distance;
-            
-            // Вычисляем скорость движения
-            const speed = player.boost ? 300 : 150; // пикселей в секунду
-            const moveDistance = (speed * deltaTime) / 1000;
-            
-            // Двигаем игрока в направлении курсора
-            player.x += dirX * moveDistance;
-            player.y += dirY * moveDistance;
+        console.log('Расстояние до курсора:', distance.toFixed(2));
+        
+        // Проверяем, что мышь действительно двигалась
+        if (this.mouse.x === 0 && this.mouse.y === 0) {
+            console.log('Мышь не двигалась, игрок стоит на месте');
+            return; // Не двигаем игрока, если мышь не двигалась
         }
+        
+        // Если курсор слишком близко, не двигаемся
+        if (distance < 5) {
+            console.log('Курсор слишком близко, игрок стоит на месте');
+            return;
+        }
+        
+        // Нормализуем вектор направления
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+        
+        // Вычисляем скорость движения
+        const speed = player.boost ? 300 : 150; // пикселей в секунду
+        const moveDistance = (speed * deltaTime) / 1000;
+        
+        // Двигаем игрока в направлении курсора
+        const oldX = player.x;
+        const oldY = player.y;
+        
+        player.x += dirX * moveDistance;
+        player.y += dirY * moveDistance;
+        
+        console.log('Игрок двинулся с', oldX.toFixed(2), oldY.toFixed(2), 'на', player.x.toFixed(2), player.y.toFixed(2));
         
         // Ограничиваем игрока в пределах мира
         player.x = Math.max(player.radius, Math.min(this.worldSize.width - player.radius, player.x));
