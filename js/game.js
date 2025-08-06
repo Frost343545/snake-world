@@ -227,7 +227,7 @@ class GameEngine {
     }
 
     updatePlayer(player, deltaTime) {
-        // Вычисляем направление к мыши
+        // Вычисляем направление к мыши в мировых координатах
         const worldMouseX = (this.mouse.x - this.centerX) / this.camera.zoom + this.camera.x;
         const worldMouseY = (this.mouse.y - this.centerY) / this.camera.zoom + this.camera.y;
         
@@ -235,8 +235,13 @@ class GameEngine {
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Добавляем отладку движения
-        if (distance > 5) { // Минимальное расстояние для движения
+        // Ограничиваем максимальное расстояние для предотвращения скачков
+        const maxDistance = 1000;
+        if (distance > maxDistance) {
+            console.warn('Distance too large, resetting player position');
+            player.x = worldMouseX;
+            player.y = worldMouseY;
+        } else if (distance > 5) { // Минимальное расстояние для движения
             const speed = player.boost ? 200 : 100; // пикселей в секунду
             const moveDistance = (speed * deltaTime) / 1000;
             
@@ -247,8 +252,6 @@ class GameEngine {
                 player.x = worldMouseX;
                 player.y = worldMouseY;
             }
-            
-            console.log('Player moving:', player.x, player.y, 'Distance:', distance, 'Mouse:', worldMouseX, worldMouseY);
         }
         
         // Обновляем сегменты змеи
@@ -426,8 +429,24 @@ class GameEngine {
         const targetX = player.x - this.centerX / this.camera.zoom;
         const targetY = player.y - this.centerY / this.camera.zoom;
         
-        this.camera.x += (targetX - this.camera.x) * 0.1;
-        this.camera.y += (targetY - this.camera.y) * 0.1;
+        // Ограничиваем камеру в пределах мира
+        const maxX = this.worldSize.width - this.centerX / this.camera.zoom;
+        const maxY = this.worldSize.height - this.centerY / this.camera.zoom;
+        
+        const clampedTargetX = Math.max(0, Math.min(maxX, targetX));
+        const clampedTargetY = Math.max(0, Math.min(maxY, targetY));
+        
+        // Плавное следование с ограничением скорости
+        const cameraSpeed = 0.1;
+        this.camera.x += (clampedTargetX - this.camera.x) * cameraSpeed;
+        this.camera.y += (clampedTargetY - this.camera.y) * cameraSpeed;
+        
+        // Дополнительная проверка на разумные значения
+        if (Math.abs(this.camera.x) > 10000 || Math.abs(this.camera.y) > 10000) {
+            console.warn('Camera position too large, resetting to player');
+            this.camera.x = player.x - this.centerX / this.camera.zoom;
+            this.camera.y = player.y - this.centerY / this.camera.zoom;
+        }
     }
 
     updateUI() {
@@ -648,6 +667,13 @@ class GameEngine {
             
             this.players.clear();
             for (const playerData of data.players) {
+                // Проверяем и исправляем неразумные координаты
+                if (Math.abs(playerData.x) > 10000 || Math.abs(playerData.y) > 10000) {
+                    console.warn('Player coordinates too large, resetting to center');
+                    playerData.x = this.worldSize.width / 2;
+                    playerData.y = this.worldSize.height / 2;
+                }
+                
                 this.players.set(playerData.id, playerData);
                 console.log('Added player to collection:', playerData.id, playerData.name, 'at', playerData.x, playerData.y);
                 
