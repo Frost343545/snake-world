@@ -582,7 +582,22 @@ class GameEngine {
     }
 
     renderPlayers() {
+        console.log('=== РЕНДЕРИНГ ИГРОКОВ ===');
+        console.log('Всего игроков в коллекции:', this.players.size);
+        
         for (const player of this.players.values()) {
+            console.log('Рендерим игрока:', player.name, 'ID:', player.id);
+            console.log('Позиция игрока:', player.x, player.y);
+            console.log('Сегменты:', player.segments.length);
+            console.log('Радиус:', player.radius);
+            console.log('Камера:', this.camera.x, this.camera.y);
+            
+            // Проверяем, находится ли игрок в видимой области
+            const screenX = (player.x - this.camera.x) * this.camera.zoom + this.centerX;
+            const screenY = (player.y - this.camera.y) * this.camera.zoom + this.centerY;
+            console.log('Позиция на экране:', screenX, screenY);
+            console.log('Размеры экрана:', this.canvas.width, this.canvas.height);
+            
             this.renderPlayer(player);
         }
     }
@@ -590,10 +605,15 @@ class GameEngine {
     renderPlayer(player) {
         this.ctx.save();
         
+        console.log('Начинаем рендеринг игрока:', player.name);
+        console.log('Сегменты для рендеринга:', player.segments.length);
+        
         // Рендерим сегменты змеи
         for (let i = player.segments.length - 1; i >= 0; i--) {
             const segment = player.segments[i];
             const segmentRadius = player.radius * (1 - i * 0.02);
+            
+            console.log(`Сегмент ${i}:`, segment.x, segment.y, 'радиус:', segmentRadius);
             
             if (segmentRadius > 2) {
                 // Создаем градиент для сегмента
@@ -625,6 +645,10 @@ class GameEngine {
                     this.ctx.arc(segment.x - segmentRadius * 0.3, segment.y - segmentRadius * 0.3, segmentRadius * 0.3, 0, Math.PI * 2);
                     this.ctx.fill();
                 }
+                
+                console.log(`Сегмент ${i} отрендерен с цветом:`, baseColor);
+            } else {
+                console.log(`Сегмент ${i} слишком маленький, пропускаем`);
             }
         }
         
@@ -637,6 +661,7 @@ class GameEngine {
         }
         
         this.ctx.restore();
+        console.log('Рендеринг игрока завершен');
     }
 
     renderParticles() {
