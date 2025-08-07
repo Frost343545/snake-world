@@ -130,14 +130,14 @@ class GameEngine {
                     y: playerData.y
                 });
             }
-            
-            // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
-            for (const segment of playerData.segments) {
-                if (segment.x < 0) segment.x = 0;
-                if (segment.y < 0) segment.y = 0;
-                if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
-                if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
-            }
+        }
+        
+        // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
+        for (const segment of playerData.segments) {
+            if (segment.x < 0) segment.x = 0;
+            if (segment.y < 0) segment.y = 0;
+            if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+            if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
         }
         
         // Устанавливаем начальный радиус если его нет
@@ -313,6 +313,14 @@ class GameEngine {
         const segments = player.segments;
         const segmentDistance = 20;
         
+        // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
+        for (const segment of segments) {
+            if (segment.x < 0) segment.x = 0;
+            if (segment.y < 0) segment.y = 0;
+            if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+            if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
+        }
+        
         // Обновляем позиции сегментов
         for (let i = segments.length - 1; i > 0; i--) {
             const current = segments[i];
@@ -333,6 +341,14 @@ class GameEngine {
         if (segments.length > 0) {
             segments[0].x = player.x;
             segments[0].y = player.y;
+        }
+        
+        // ИСПРАВЛЕНИЕ: Еще раз проверяем границы после обновления
+        for (const segment of segments) {
+            if (segment.x < 0) segment.x = 0;
+            if (segment.y < 0) segment.y = 0;
+            if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+            if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
         }
     }
 
