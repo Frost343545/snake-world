@@ -645,6 +645,11 @@ class GameEngine {
         console.log('Начинаем рендеринг игрока:', player.name);
         console.log('Сегменты для рендеринга:', player.segments.length);
         
+        // Массив иконок голов
+        const headIcons = [
+            '🐍', '🐉', '⚔️', '💀', '🎓', '💎', '⛑️', '🪬', '👑', '👼', '😈', '🤖'
+        ];
+        
         // Рендерим сегменты змеи
         for (let i = player.segments.length - 1; i >= 0; i--) {
             const segment = player.segments[i];
@@ -653,34 +658,45 @@ class GameEngine {
             console.log(`Сегмент ${i}:`, segment.x, segment.y, 'радиус:', segmentRadius);
             
             if (segmentRadius > 2) {
-                // Создаем градиент для сегмента
-                const gradient = this.ctx.createRadialGradient(
-                    segment.x, segment.y, 0,
-                    segment.x, segment.y, segmentRadius
-                );
-                
                 const isHead = i === 0;
                 const baseColor = isHead ? player.headColor : player.color;
                 
-                gradient.addColorStop(0, baseColor);
-                gradient.addColorStop(1, this.darkenColor(baseColor, 0.3));
-                
-                this.ctx.fillStyle = gradient;
-                this.ctx.beginPath();
-                this.ctx.arc(segment.x, segment.y, segmentRadius, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Добавляем обводку
-                this.ctx.strokeStyle = this.darkenColor(baseColor, 0.5);
-                this.ctx.lineWidth = 1;
-                this.ctx.stroke();
-                
-                // Добавляем блик для головы
-                if (isHead) {
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                // Для головы рисуем иконку, для остальных сегментов - круг
+                if (isHead && player.headType !== undefined && headIcons[player.headType]) {
+                    // Рендерим иконку головы
+                    this.ctx.font = `${segmentRadius * 1.5}px Arial`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(headIcons[player.headType], segment.x, segment.y);
+                    
+                    console.log(`Голова отрендерена с иконкой:`, headIcons[player.headType], 'headType:', player.headType);
+                } else {
+                    // Создаем градиент для сегмента
+                    const gradient = this.ctx.createRadialGradient(
+                        segment.x, segment.y, 0,
+                        segment.x, segment.y, segmentRadius
+                    );
+                    
+                    gradient.addColorStop(0, baseColor);
+                    gradient.addColorStop(1, this.darkenColor(baseColor, 0.3));
+                    
+                    this.ctx.fillStyle = gradient;
                     this.ctx.beginPath();
-                    this.ctx.arc(segment.x - segmentRadius * 0.3, segment.y - segmentRadius * 0.3, segmentRadius * 0.3, 0, Math.PI * 2);
+                    this.ctx.arc(segment.x, segment.y, segmentRadius, 0, Math.PI * 2);
                     this.ctx.fill();
+                    
+                    // Добавляем обводку
+                    this.ctx.strokeStyle = this.darkenColor(baseColor, 0.5);
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                    
+                    // Добавляем блик для головы (если нет иконки)
+                    if (isHead && (player.headType === undefined || !headIcons[player.headType])) {
+                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        this.ctx.beginPath();
+                        this.ctx.arc(segment.x - segmentRadius * 0.3, segment.y - segmentRadius * 0.3, segmentRadius * 0.3, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
                 }
                 
                 console.log(`Сегмент ${i} отрендерен с цветом:`, baseColor);
