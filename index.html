@@ -3,237 +3,275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>SNAKE WORLD - РћРЅР»Р°Р№РЅ РРіСЂР°</title>
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>рџђЌ</text></svg>">
+    <title>Snake World - Многопользовательская игра</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Р—Р°РіСЂСѓР·РѕС‡РЅС‹Р№ СЌРєСЂР°РЅ -->
-    <div id="loadingScreen" class="loading-screen">
+    <!-- Загрузочный экран -->
+    <div id="loadingScreen" class="screen">
         <div class="loading-content">
             <h1 class="game-title">SNAKE WORLD</h1>
-            <div class="loading-animation">
-                <div class="snake-loader"></div>
-            </div>
-            <p class="loading-text">РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...</p>
+            <div class="loading-spinner"></div>
+            <p id="loadingText">Подключение к серверу...</p>
         </div>
     </div>
 
-    <!-- Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ -->
-    <div id="mainMenu" class="main-menu hidden">
-        <div class="menu-container">
+    <!-- Главное меню -->
+    <div id="mainMenu" class="screen hidden">
+        <div class="menu-content">
             <h1 class="game-title">SNAKE WORLD</h1>
             <div class="menu-buttons">
-                <button id="playBtn" class="menu-btn primary-btn">
-                    <i class="fas fa-play"></i> РРіСЂР°С‚СЊ
-                </button>
-                <button id="customizeBtn" class="menu-btn secondary-btn">
-                    <i class="fas fa-palette"></i> РќР°СЃС‚СЂРѕР№РєРё
-                </button>
-                <button id="leaderboardBtn" class="menu-btn secondary-btn">
-                    <i class="fas fa-trophy"></i> РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ
-                </button>
-                <button id="helpBtn" class="menu-btn secondary-btn">
-                    <i class="fas fa-question-circle"></i> РљР°Рє РёРіСЂР°С‚СЊ
-                </button>
+                <button id="playBtn" class="menu-btn">Играть</button>
+                <button id="settingsBtn" class="menu-btn">Настройки</button>
+                <button id="leaderboardBtn" class="menu-btn">Таблица лидеров</button>
+                <button id="howToPlayBtn" class="menu-btn">Как играть</button>
             </div>
         </div>
     </div>
 
-    <!-- Р­РєСЂР°РЅ РЅР°СЃС‚СЂРѕР№РєРё РїРµСЂСЃРѕРЅР°Р¶Р° -->
-    <div id="customizeScreen" class="customize-screen hidden">
-        <div class="customize-container">
-            <h2>РќР°СЃС‚СЂРѕР№РєР° РїРµСЂСЃРѕРЅР°Р¶Р°</h2>
-            <div class="customize-section">
-                <h3>Р’С‹Р±РµСЂРёС‚Рµ СЃРєРёРЅ Р·РјРµРё</h3>
-                <div class="skin-grid" id="skinGrid">
-                    <!-- РЎРєРёРЅС‹ Р±СѓРґСѓС‚ РґРѕР±Р°РІР»РµРЅС‹ РґРёРЅР°РјРёС‡РµСЃРєРё -->
+    <!-- Настройка персонажа -->
+    <div id="characterSetup" class="screen hidden">
+        <div class="setup-content">
+            <h2>Настройка персонажа</h2>
+            
+            <div class="setup-section">
+                <h3>Выберите скин змеи</h3>
+                <div class="skin-selector">
+                    <div class="skin-option active" data-skin="default">
+                        <div class="skin-preview default-skin"></div>
+                    </div>
+                    <div class="skin-option" data-skin="rainbow">
+                        <div class="skin-preview rainbow-skin"></div>
+                    </div>
+                    <div class="skin-option" data-skin="neon">
+                        <div class="skin-preview neon-skin"></div>
+                    </div>
+                    <div class="skin-option" data-skin="fire">
+                        <div class="skin-preview fire-skin"></div>
+                    </div>
                 </div>
             </div>
-            <div class="customize-section">
-                <h3>Р’С‹Р±РµСЂРёС‚Рµ РіРѕР»РѕРІСѓ</h3>
-                <div class="head-grid" id="headGrid">
-                    <!-- Р“РѕР»РѕРІС‹ Р±СѓРґСѓС‚ РґРѕР±Р°РІР»РµРЅС‹ РґРёРЅР°РјРёС‡РµСЃРєРё -->
+
+            <div class="setup-section">
+                <h3>Выберите голову</h3>
+                <div class="head-selector">
+                    <div class="head-option active" data-head="default">
+                        <div class="head-preview default-head"></div>
+                    </div>
+                    <div class="head-option" data-head="crown">
+                        <div class="head-preview crown-head"></div>
+                    </div>
+                    <div class="head-option" data-head="devil">
+                        <div class="head-preview devil-head"></div>
+                    </div>
+                    <div class="head-option" data-head="angel">
+                        <div class="head-preview angel-head"></div>
+                    </div>
                 </div>
             </div>
-            <div class="customize-section">
-                <h3>РРјСЏ РёРіСЂРѕРєР°</h3>
-                <input type="text" id="playerName" placeholder="Р’РІРµРґРёС‚Рµ РІР°С€Рµ РёРјСЏ" maxlength="15">
+
+            <div class="setup-section">
+                <h3>Имя игрока</h3>
+                <input type="text" id="playerName" placeholder="Введите имя" maxlength="15" value="Игрок">
             </div>
-            <div class="customize-buttons">
-                <button id="backToMenuBtn" class="menu-btn secondary-btn">РќР°Р·Р°Рґ</button>
-                <button id="startGameBtn" class="menu-btn primary-btn">РќР°С‡Р°С‚СЊ РёРіСЂСѓ</button>
+
+            <div class="setup-buttons">
+                <button id="backToMenuBtn" class="setup-btn">Назад</button>
+                <button id="startGameBtn" class="setup-btn primary">Начать игру</button>
             </div>
         </div>
     </div>
 
-    <!-- РРіСЂРѕРІРѕР№ СЌРєСЂР°РЅ -->
-    <div id="gameScreen" class="game-screen hidden">
+    <!-- Игровой экран -->
+    <div id="gameScreen" class="screen hidden">
         <canvas id="gameCanvas"></canvas>
         
-        <!-- РРіСЂРѕРІРѕР№ РёРЅС‚РµСЂС„РµР№СЃ -->
-        <div class="game-ui">
-            <div class="score-panel">
-                <div class="score-item">
-                    <span class="score-label">Р”Р»РёРЅР°:</span>
-                    <span id="lengthScore" class="score-value">0</span>
+        <!-- HUD -->
+        <div class="hud">
+            <div class="hud-left">
+                <div class="hud-stat">
+                    <span class="stat-label">Длина:</span>
+                    <span id="lengthValue" class="stat-value">0</span>
                 </div>
-                <div class="score-item">
-                    <span class="score-label">РћС‡РєРё:</span>
-                    <span id="pointsScore" class="score-value">0</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">РРіСЂРѕРєРѕРІ:</span>
-                    <span id="playersCount" class="score-value">0</span>
+                <div class="hud-stat">
+                    <span class="stat-label">Очки:</span>
+                    <span id="scoreValue" class="stat-value">0</span>
                 </div>
             </div>
             
-            <div class="mini-map" id="miniMap">
-                <!-- РњРёРЅРё-РєР°СЂС‚Р° Р±СѓРґРµС‚ Р·РґРµСЃСЊ -->
+            <div class="hud-center">
+                <div class="hud-stat">
+                    <span class="stat-label">Игроков:</span>
+                    <span id="playersValue" class="stat-value">0</span>
+                </div>
             </div>
             
-            <div class="game-controls">
-                <button id="pauseBtn" class="control-btn">
-                    <i class="fas fa-pause"></i>
-                </button>
-                <button id="fullscreenBtn" class="control-btn">
-                    <i class="fas fa-expand"></i>
-                </button>
+            <div class="hud-right">
+                <button id="pauseBtn" class="hud-btn"></button>
             </div>
         </div>
 
-        <!-- РџР°РЅРµР»СЊ Р»РёРґРµСЂРѕРІ -->
-        <div class="leaderboard-panel" id="leaderboardPanel">
-            <h3>РўРѕРї РёРіСЂРѕРєРѕРІ</h3>
-            <div class="leaderboard-list" id="leaderboardList">
-                <!-- РЎРїРёСЃРѕРє Р»РёРґРµСЂРѕРІ Р±СѓРґРµС‚ Р·РґРµСЃСЊ -->
-            </div>
+        <!-- Мини-карта -->
+        <div id="minimap" class="minimap">
+            <canvas id="minimapCanvas"></canvas>
         </div>
 
-        <!-- Р­РєСЂР°РЅ РїР°СѓР·С‹ -->
-        <div id="pauseScreen" class="pause-screen hidden">
-            <div class="pause-content">
-                <h2>РџР°СѓР·Р°</h2>
-                <div class="pause-buttons">
-                    <button id="resumeBtn" class="menu-btn primary-btn">
-                        <i class="fas fa-play"></i> РџСЂРѕРґРѕР»Р¶РёС‚СЊ
-                    </button>
-                    <button id="settingsBtn" class="menu-btn secondary-btn">
-                        <i class="fas fa-cog"></i> РќР°СЃС‚СЂРѕР№РєРё
-                    </button>
-                    <button id="quitGameBtn" class="menu-btn secondary-btn">
-                        <i class="fas fa-home"></i> Р’С‹Р№С‚Рё РІ РјРµРЅСЋ
-                    </button>
-                </div>
-            </div>
+        <!-- Таблица лидеров в игре -->
+        <div id="gameLeaderboard" class="game-leaderboard">
+            <h3>Топ игроков</h3>
+            <div id="leaderboardList"></div>
         </div>
+    </div>
 
-        <!-- Р­РєСЂР°РЅ РѕРєРѕРЅС‡Р°РЅРёСЏ РёРіСЂС‹ -->
-        <div id="gameOverScreen" class="game-over-screen hidden">
-            <div class="game-over-content">
-                <h2>РРіСЂР° РѕРєРѕРЅС‡РµРЅР°</h2>
-                <div class="final-stats">
-                    <p>Р’Р°С€Р° РґР»РёРЅР°: <span id="finalLength">0</span></p>
-                    <p>Р’Р°С€Рё РѕС‡РєРё: <span id="finalPoints">0</span></p>
-                    <p>Р’СЂРµРјСЏ РІС‹Р¶РёРІР°РЅРёСЏ: <span id="survivalTime">0:00</span></p>
-                </div>
-                <div class="game-over-buttons">
-                    <button id="playAgainBtn" class="menu-btn primary-btn">РРіСЂР°С‚СЊ СЃРЅРѕРІР°</button>
-                    <button id="backToMainBtn" class="menu-btn secondary-btn">Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ</button>
-                </div>
+    <!-- Пауза -->
+    <div id="pauseMenu" class="screen hidden">
+        <div class="pause-content">
+            <h2>Пауза</h2>
+            <div class="pause-buttons">
+                <button id="resumeBtn" class="pause-btn">Продолжить</button>
+                <button id="pauseSettingsBtn" class="pause-btn">Настройки</button>
+                <button id="exitToMenuBtn" class="pause-btn">Выйти в меню</button>
             </div>
         </div>
     </div>
 
-    <!-- РњРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ РїРѕРјРѕС‰Рё -->
-    <div id="helpModal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>РљР°Рє РёРіСЂР°С‚СЊ</h2>
-            <div class="help-content">
-                <div class="help-section">
-                    <h3>РЈРїСЂР°РІР»РµРЅРёРµ</h3>
-                    <p><strong>РњС‹С€СЊ:</strong> РЈРїСЂР°РІР»СЏР№С‚Рµ РЅР°РїСЂР°РІР»РµРЅРёРµРј РґРІРёР¶РµРЅРёСЏ</p>
-                    <p><strong>РџСЂРѕР±РµР»:</strong> РЈСЃРєРѕСЂРµРЅРёРµ (РїРѕС‚СЂРµР±Р»СЏРµС‚ РґР»РёРЅСѓ)</p>
-                    <p><strong>ESC:</strong> РџР°СѓР·Р°</p>
+    <!-- Игра окончена -->
+    <div id="gameOverScreen" class="screen hidden">
+        <div class="gameover-content">
+            <h2>Игра окончена</h2>
+            <div class="gameover-stats">
+                <div class="stat">
+                    <span class="stat-label">Ваша длина:</span>
+                    <span id="finalLength" class="stat-value">0</span>
                 </div>
-                <div class="help-section">
-                    <h3>Р¦РµР»СЊ РёРіСЂС‹</h3>
-                    <p>РЎРѕР±РёСЂР°Р№С‚Рµ РµРґСѓ, С‡С‚РѕР±С‹ СЂР°СЃС‚Рё Рё СЃС‚Р°РЅРѕРІРёС‚СЊСЃСЏ РґР»РёРЅРЅРµРµ. РР·Р±РµРіР°Р№С‚Рµ СЃС‚РѕР»РєРЅРѕРІРµРЅРёР№ СЃ РґСЂСѓРіРёРјРё Р·РјРµСЏРјРё Рё СЃС‚РµРЅР°РјРё.</p>
+                <div class="stat">
+                    <span class="stat-label">Ваши очки:</span>
+                    <span id="finalScore" class="stat-value">0</span>
                 </div>
-                <div class="help-section">
-                    <h3>РЎРѕРІРµС‚С‹</h3>
-                    <ul>
-                        <li>РСЃРїРѕР»СЊР·СѓР№С‚Рµ СѓСЃРєРѕСЂРµРЅРёРµ РѕСЃС‚РѕСЂРѕР¶РЅРѕ - РѕРЅРѕ СѓРјРµРЅСЊС€Р°РµС‚ РІР°С€Сѓ РґР»РёРЅСѓ</li>
-                        <li>РЎР»РµРґРёС‚Рµ Р·Р° РјРёРЅРё-РєР°СЂС‚РѕР№</li>
-                        <li>Р‘РѕР»СЊС€РёРµ Р·РјРµРё РјРѕРіСѓС‚ СЃСЉРµСЃС‚СЊ РІР°СЃ</li>
-                        <li>РњР°Р»РµРЅСЊРєРёРµ Р·РјРµРё - Р»РµРіРєР°СЏ РґРѕР±С‹С‡Р°</li>
-                    </ul>
+                <div class="stat">
+                    <span class="stat-label">Время выживания:</span>
+                    <span id="survivalTime" class="stat-value">0:00</span>
                 </div>
+            </div>
+            <div class="gameover-buttons">
+                <button id="playAgainBtn" class="gameover-btn">Играть снова</button>
+                <button id="mainMenuBtn" class="gameover-btn">Главное меню</button>
             </div>
         </div>
     </div>
 
-    <!-- РњРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ РЅР°СЃС‚СЂРѕРµРє -->
-    <div id="settingsModal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>РќР°СЃС‚СЂРѕР№РєРё</h2>
-            <div class="settings-content">
-                <div class="settings-section">
-                    <h3>РџРµСЂСЃРѕРЅР°Р¶</h3>
-                    <div class="setting-item">
-                        <label>РРјСЏ РёРіСЂРѕРєР°:</label>
-                        <input type="text" id="settingsPlayerName" placeholder="Р’РІРµРґРёС‚Рµ РІР°С€Рµ РёРјСЏ" maxlength="15">
-                    </div>
-                    <div class="setting-item">
-                        <label>РЎРєРёРЅ Р·РјРµРё:</label>
-                        <div class="settings-skin-grid" id="settingsSkinGrid">
-                            <!-- РЎРєРёРЅС‹ Р±СѓРґСѓС‚ РґРѕР±Р°РІР»РµРЅС‹ РґРёРЅР°РјРёС‡РµСЃРєРё -->
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <label>Р“РѕР»РѕРІР° Р·РјРµРё:</label>
-                        <div class="settings-head-grid" id="settingsHeadGrid">
-                            <!-- Р“РѕР»РѕРІС‹ Р±СѓРґСѓС‚ РґРѕР±Р°РІР»РµРЅС‹ РґРёРЅР°РјРёС‡РµСЃРєРё -->
-                        </div>
-                    </div>
+    <!-- Как играть -->
+    <div id="howToPlayScreen" class="screen hidden">
+        <div class="howtoplay-content">
+            <h2>Как играть</h2>
+            
+            <div class="howtoplay-section">
+                <h3>Управление</h3>
+                <ul>
+                    <li><strong>Мышь:</strong> Управляйте направлением движения</li>
+                    <li><strong>Пробел:</strong> Ускорение (потребляет длину)</li>
+                    <li><strong>ESC:</strong> Пауза</li>
+                </ul>
+            </div>
+
+            <div class="howtoplay-section">
+                <h3>Цель игры</h3>
+                <p>Собирайте еду, чтобы расти и становиться длиннее. Избегайте столкновений с другими змеями и стенами.</p>
+            </div>
+
+            <div class="howtoplay-section">
+                <h3>Советы</h3>
+                <ul>
+                    <li>Используйте ускорение осторожно - оно уменьшает вашу длину</li>
+                    <li>Следите за мини-картой</li>
+                    <li>Большие змеи могут съесть вас</li>
+                    <li>Маленькие змеи - легкая добыча</li>
+                </ul>
+            </div>
+
+            <button id="closeHowToPlayBtn" class="close-btn"></button>
+        </div>
+    </div>
+
+    <!-- Настройки -->
+    <div id="settingsScreen" class="screen hidden">
+        <div class="settings-content">
+            <h2>Настройки</h2>
+            
+            <div class="settings-section">
+                <h3>Персонаж</h3>
+                <div class="setting-item">
+                    <label>Имя игрока:</label>
+                    <input type="text" id="settingsPlayerName" placeholder="Введите имя">
                 </div>
-                <div class="settings-section">
-                    <h3>РРіСЂРѕРІС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё</h3>
-                    <div class="setting-item">
-                        <label>Р—РІСѓРєРѕРІС‹Рµ СЌС„С„РµРєС‚С‹:</label>
-                        <input type="checkbox" id="soundEnabled" checked>
-                    </div>
-                    <div class="setting-item">
-                        <label>РњСѓР·С‹РєР°:</label>
-                        <input type="checkbox" id="musicEnabled" checked>
-                    </div>
-                    <div class="setting-item">
-                        <label>РџРѕР»РЅРѕСЌРєСЂР°РЅРЅС‹Р№ СЂРµР¶РёРј:</label>
-                        <input type="checkbox" id="fullscreenEnabled">
-                    </div>
+                <div class="setting-item">
+                    <label>Скин змеи:</label>
+                    <select id="settingsSkin">
+                        <option value="default">Обычный</option>
+                        <option value="rainbow">Радужный</option>
+                        <option value="neon">Неоновый</option>
+                        <option value="fire">Огненный</option>
+                    </select>
                 </div>
-                <div class="settings-buttons">
-                    <button id="saveSettingsBtn" class="menu-btn primary-btn">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
-                    <button id="cancelSettingsBtn" class="menu-btn secondary-btn">РћС‚РјРµРЅР°</button>
+                <div class="setting-item">
+                    <label>Голова змеи:</label>
+                    <select id="settingsHead">
+                        <option value="default">Обычная</option>
+                        <option value="crown">Корона</option>
+                        <option value="devil">Дьявол</option>
+                        <option value="angel">Ангел</option>
+                    </select>
                 </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Игровые настройки</h3>
+                <div class="setting-item">
+                    <label>Звуковые эффекты:</label>
+                    <input type="checkbox" id="soundEffects" checked>
+                </div>
+                <div class="setting-item">
+                    <label>Музыка:</label>
+                    <input type="checkbox" id="music" checked>
+                </div>
+                <div class="setting-item">
+                    <label>Полноэкранный режим:</label>
+                    <input type="checkbox" id="fullscreen">
+                </div>
+            </div>
+
+            <div class="settings-buttons">
+                <button id="saveSettingsBtn" class="settings-btn">Сохранить</button>
+                <button id="cancelSettingsBtn" class="settings-btn">Отмена</button>
             </div>
         </div>
     </div>
 
-    <!-- РЈРІРµРґРѕРјР»РµРЅРёСЏ -->
-    <div id="notificationContainer" class="notification-container"></div>
+    <!-- Таблица лидеров -->
+    <div id="leaderboardScreen" class="screen hidden">
+        <div class="leaderboard-content">
+            <h2>Таблица лидеров</h2>
+            <div id="globalLeaderboard"></div>
+            <button id="closeLeaderboardBtn" class="close-btn"></button>
+        </div>
+    </div>
 
-    <!-- РЎРєСЂРёРїС‚С‹ -->
-    <script src="js/websocket.js?v=30"></script>
-    <script src="js/game.js?v=32"></script>
-    <script src="js/ui.js?v=30"></script>
-    <script src="js/main.js?v=30"></script>
+    <!-- Уведомления -->
+    <div id="notifications"></div>
+
+    <!-- Аудио элементы -->
+    <audio id="bgMusic" loop>
+        <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A" type="audio/mpeg">
+    </audio>
+    <audio id="eatSound">
+        <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A" type="audio/mpeg">
+    </audio>
+    <audio id="deathSound">
+        <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A" type="audio/mpeg">
+    </audio>
+
+    <script src="js/websocket.js"></script>
+    <script src="js/game.js"></script>
 </body>
-</html> 
+</html>

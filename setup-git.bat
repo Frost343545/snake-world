@@ -1,22 +1,25 @@
 @echo off
-echo Настройка Git для SNAKE WORLD
-echo.
+echo Настройка Git репозитория для Snake World...
 
-echo Введите ваше имя для Git:
-set /p git_name=
+REM Инициализация Git репозитория
+git init
 
-echo Введите ваш email для Git:
-set /p git_email=
+REM Добавление всех файлов
+git add .
 
-git config --global user.name "%git_name%"
-git config --global user.email "%git_email%"
+REM Первый коммит
+git commit -m "Initial commit: Snake World multiplayer game"
+
+REM Добавление удаленного репозитория
+git remote add origin https://github.com/Frost343545/snake-world.git
+
+REM Отправка в GitHub
+git branch -M main
+git push -u origin main
 
 echo.
-echo Git настроен!
-echo Имя: %git_name%
-echo Email: %git_email%
+echo Репозиторий успешно настроен!
+echo Игра доступна по адресу: https://snake-world.onrender.com
+echo GitHub репозиторий: https://github.com/Frost343545/snake-world
 echo.
-echo Теперь можно выполнить:
-echo git commit -m "Initial commit: SNAKE WORLD game"
-echo.
-pause 
+pause

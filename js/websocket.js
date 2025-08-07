@@ -1,256 +1,182 @@
-// WebSocket модуль для SNAKE WORLD
-class WebSocketManager {
+class WebSocketClient {
     constructor() {
         this.socket = null;
         this.isConnected = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 1000;
-        this.serverUrl = this.getServerUrl();
-        this.messageHandlers = new Map();
-        this.connectionCallbacks = [];
+        this.messageQueue = [];
+        this.eventHandlers = {};
         
-        this.setupMessageHandlers();
+        // Автоматическое переподключение
+        this.autoReconnect = true;
     }
 
-    getServerUrl() {
-        // Для локальной разработки используем localhost
-        // Для продакшена замените на ваш сервер
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.hostname === 'localhost' ? 'localhost:3000' : window.location.host;
-        return `${protocol}//${host}`;
-    }
+    connect(serverUrl = 'wss://snake-world.onrender.com') {
+        try {
+            console.log('Подключение к серверу:', serverUrl);
+            this.socket = new WebSocket(serverUrl);
+            
+            this.socket.onopen = () => {
+                console.log('WebSocket соединение установлено');
+                this.isConnected = true;
+                this.reconnectAttempts = 0;
+                this.processMessageQueue();
+                this.emit('connected');
+            };
 
-    connect() {
-        return new Promise((resolve, reject) => {
-            try {
-                console.log('Подключение к серверу:', this.serverUrl);
-                this.socket = new WebSocket(this.serverUrl);
+            this.socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleMessage(data);
+                } catch (error) {
+                    console.error('Ошибка парсинга сообщения:', error);
+                }
+            };
 
-                this.socket.onopen = () => {
-                    console.log('WebSocket соединение установлено');
-                    this.isConnected = true;
-                    this.reconnectAttempts = 0;
-                    this.notifyConnectionCallbacks(true);
-                    resolve();
-                };
+            this.socket.onclose = (event) => {
+                console.log('WebSocket соединение закрыто:', event.code, event.reason);
+                this.isConnected = false;
+                this.emit('disconnected', event);
+                
+                if (this.autoReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.scheduleReconnect();
+                }
+            };
 
-                this.socket.onmessage = (event) => {
-                    this.handleMessage(event.data);
-                };
+            this.socket.onerror = (error) => {
+                console.error('WebSocket ошибка:', error);
+                this.emit('error', error);
+            };
 
-                this.socket.onclose = (event) => {
-                    console.log('WebSocket соединение закрыто:', event.code, event.reason);
-                    this.isConnected = false;
-                    this.notifyConnectionCallbacks(false);
-                    
-                    if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
-                        this.scheduleReconnect();
-                    }
-                };
-
-                this.socket.onerror = (error) => {
-                    console.error('WebSocket ошибка:', error);
-                    reject(error);
-                };
-
-            } catch (error) {
-                console.error('Ошибка при создании WebSocket:', error);
-                reject(error);
-            }
-        });
+        } catch (error) {
+            console.error('Ошибка создания WebSocket соединения:', error);
+            this.emit('error', error);
+        }
     }
 
     scheduleReconnect() {
         this.reconnectAttempts++;
         const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-        
         console.log(`Попытка переподключения ${this.reconnectAttempts}/${this.maxReconnectAttempts} через ${delay}ms`);
         
         setTimeout(() => {
             if (!this.isConnected) {
-                this.connect().catch(error => {
-                    console.error('Ошибка переподключения:', error);
-                });
+                this.connect();
             }
         }, delay);
     }
 
     disconnect() {
+        this.autoReconnect = false;
         if (this.socket) {
-            this.socket.close(1000, 'Пользователь отключился');
-            this.socket = null;
-            this.isConnected = false;
+            this.socket.close();
         }
     }
 
     send(type, data = {}) {
-        if (!this.isConnected || !this.socket) {
-            console.warn('WebSocket не подключен, сообщение не отправлено:', type);
-            return false;
-        }
+        const message = {
+            type: type,
+            data: data,
+            timestamp: Date.now()
+        };
 
-        try {
-            const message = {
-                type: type,
-                data: data,
-                timestamp: Date.now()
-            };
-            
+        if (this.isConnected && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify(message));
-            return true;
-        } catch (error) {
-            console.error('Ошибка отправки сообщения:', error);
-            return false;
+        } else {
+            this.messageQueue.push(message);
         }
     }
 
-    setupMessageHandlers() {
-        // Обработчики сообщений от сервера
-        this.messageHandlers.set('gameState', this.handleGameState.bind(this));
-        this.messageHandlers.set('playerJoined', this.handlePlayerJoined.bind(this));
-        this.messageHandlers.set('playerLeft', this.handlePlayerLeft.bind(this));
-        this.messageHandlers.set('foodSpawned', this.handleFoodSpawned.bind(this));
-        this.messageHandlers.set('foodCollected', this.handleFoodCollected.bind(this));
-        this.messageHandlers.set('playerDied', this.handlePlayerDied.bind(this));
-        this.messageHandlers.set('leaderboard', this.handleLeaderboard.bind(this));
-        this.messageHandlers.set('error', this.handleError.bind(this));
-        this.messageHandlers.set('ping', this.handlePing.bind(this));
+    processMessageQueue() {
+        while (this.messageQueue.length > 0) {
+            const message = this.messageQueue.shift();
+            this.socket.send(JSON.stringify(message));
+        }
     }
 
     handleMessage(data) {
-        try {
-            const message = JSON.parse(data);
-            const handler = this.messageHandlers.get(message.type);
-            
-            if (handler) {
-                handler(message.data);
-            } else {
-                console.warn('Неизвестный тип сообщения:', message.type);
-            }
-        } catch (error) {
-            console.error('Ошибка парсинга сообщения:', error);
-        }
-    }
-
-    // Обработчики сообщений
-    handleGameState(data) {
-        // Обновление состояния игры
-        if (window.gameEngine) {
-            window.gameEngine.updateGameState(data);
-        }
-    }
-
-    handlePlayerJoined(data) {
-        console.log('Игрок присоединился:', data);
-        if (window.gameEngine) {
-            window.gameEngine.addPlayer(data);
-        }
-        this.showNotification(`${data.name} присоединился к игре`, 'success');
-    }
-
-    handlePlayerLeft(data) {
-        console.log('Игрок покинул игру:', data);
-        if (window.gameEngine) {
-            window.gameEngine.removePlayer(data.id);
-        }
-        this.showNotification(`${data.name} покинул игру`, 'warning');
-    }
-
-    handleFoodSpawned(data) {
-        if (window.gameEngine) {
-            window.gameEngine.addFood(data);
-        }
-    }
-
-    handleFoodCollected(data) {
-        if (window.gameEngine) {
-            window.gameEngine.removeFood(data.id);
-        }
-    }
-
-    handlePlayerDied(data) {
-        console.log('Игрок умер:', data);
-        if (window.gameEngine) {
-            window.gameEngine.removePlayer(data.id);
-        }
+        const { type, data: messageData } = data;
         
-        if (data.id === window.gameEngine?.playerId) {
-            // Игрок умер
-            if (window.gameEngine) {
-                window.gameEngine.gameOver(data);
+        switch (type) {
+            case 'gameState':
+                this.emit('gameState', messageData);
+                break;
+            case 'playerJoined':
+                this.emit('playerJoined', messageData);
+                break;
+            case 'playerLeft':
+                this.emit('playerLeft', messageData);
+                break;
+            case 'foodSpawned':
+                this.emit('foodSpawned', messageData);
+                break;
+            case 'foodEaten':
+                this.emit('foodEaten', messageData);
+                break;
+            case 'playerDied':
+                this.emit('playerDied', messageData);
+                break;
+            case 'leaderboardUpdate':
+                this.emit('leaderboardUpdate', messageData);
+                break;
+            case 'error':
+                this.emit('serverError', messageData);
+                break;
+            case 'ping':
+                this.send('pong', { timestamp: Date.now() });
+                break;
+            default:
+                console.log('Неизвестный тип сообщения:', type, messageData);
+        }
+    }
+
+    // Система событий
+    on(event, handler) {
+        if (!this.eventHandlers[event]) {
+            this.eventHandlers[event] = [];
+        }
+        this.eventHandlers[event].push(handler);
+    }
+
+    off(event, handler) {
+        if (this.eventHandlers[event]) {
+            const index = this.eventHandlers[event].indexOf(handler);
+            if (index > -1) {
+                this.eventHandlers[event].splice(index, 1);
             }
-        } else {
-            this.showNotification(`${data.name} был съеден!`, 'warning');
         }
     }
 
-    handleLeaderboard(data) {
-        if (window.uiManager && typeof window.uiManager.updateLeaderboard === 'function') {
-            window.uiManager.updateLeaderboard(data.players);
-        } else {
-            console.warn('uiManager.updateLeaderboard не найден:', window.uiManager);
+    emit(event, data) {
+        if (this.eventHandlers[event]) {
+            this.eventHandlers[event].forEach(handler => {
+                try {
+                    handler(data);
+                } catch (error) {
+                    console.error(`Ошибка в обработчике события ${event}:`, error);
+                }
+            });
         }
     }
 
-    handleError(data) {
-        console.error('Ошибка сервера:', data);
-        this.showNotification(data.message || 'Ошибка сервера', 'error');
+    // Методы для игры
+    joinGame(playerData) {
+        this.send('joinGame', playerData);
     }
 
-    handlePing(data) {
-        // Отправляем pong обратно
-        this.send('pong', { timestamp: data.timestamp });
+    updatePosition(x, y, boost = false) {
+        this.send('updatePosition', { x, y, boost });
     }
 
-    // Методы для отправки игровых событий
-    sendPlayerJoin(playerData) {
-        return this.send('playerJoin', playerData);
+    leaveGame() {
+        this.send('leaveGame');
     }
 
-    sendPlayerMove(moveData) {
-        return this.send('playerMove', moveData);
-    }
-
-    sendPlayerBoost(boostData) {
-        return this.send('playerBoost', boostData);
-    }
-
-    sendPlayerDisconnect() {
-        return this.send('playerDisconnect', {});
-    }
-
-    // Уведомления
-    showNotification(message, type = 'info') {
-        if (window.uiManager) {
-            window.uiManager.showNotification(message, type);
-        }
-    }
-
-    // Callbacks для состояния соединения
-    onConnectionChange(callback) {
-        this.connectionCallbacks.push(callback);
-    }
-
-    notifyConnectionCallbacks(connected) {
-        this.connectionCallbacks.forEach(callback => {
-            try {
-                callback(connected);
-            } catch (error) {
-                console.error('Ошибка в callback соединения:', error);
-            }
-        });
-    }
-
-    // Получение статуса соединения
-    getConnectionStatus() {
-        return {
-            connected: this.isConnected,
-            reconnectAttempts: this.reconnectAttempts,
-            maxReconnectAttempts: this.maxReconnectAttempts
-        };
+    getLeaderboard() {
+        this.send('getLeaderboard');
     }
 }
 
-// Создаем глобальный экземпляр WebSocket менеджера
-window.webSocketManager = new WebSocketManager(); 
+// Глобальный экземпляр WebSocket клиента
+window.wsClient = new WebSocketClient(); 

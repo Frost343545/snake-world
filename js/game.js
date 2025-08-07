@@ -1,869 +1,737 @@
-// Игровой движок SNAKE WORLD
-class GameEngine {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+class SnakeGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.minimapCanvas = document.getElementById('minimapCanvas');
+        this.minimapCtx = this.minimapCanvas.getContext('2d');
         
-        // Игровое состояние
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.playerId = null;
+        this.gameState = 'loading';
+        this.player = null;
         this.players = new Map();
         this.foods = new Map();
         this.particles = [];
-        this.animations = new Map();
-        
-        // Размеры мира (увеличено для большего количества игроков)
-        this.worldSize = { width: 10000, height: 10000 };
-        
-        // Камера
-        this.camera = { x: 0, y: 0, zoom: 1 };
-        this.centerX = 0;
-        this.centerY = 0;
-        
-        // Мышь
+        this.camera = { x: 0, y: 0 };
         this.mouse = { x: 0, y: 0 };
+        this.boost = false;
         
-        // Игровые настройки
-        this.snakeSpeed = 2.5; // Скорость движения змеи
-        this.boostSpeed = 4.0; // Скорость ускорения
-        this.boostConsumption = 0.1; // Потребление длины при ускорении
-        this.boostRegeneration = 0.05; // Восстановление длины
+        this.settings = {
+            soundEffects: true,
+            music: true,
+            fullscreen: false
+        };
         
-        // Гексагональная сетка
-        this.gridSize = 50;
-        this.gridOffset = 0;
+        this.stats = {
+            length: 0,
+            score: 0,
+            survivalTime: 0,
+            startTime: 0
+        };
         
         this.init();
     }
 
     init() {
-        this.setupCanvas();
-        this.setupEventListeners();
-        this.createBackgroundPattern();
-    }
-
-    setupCanvas() {
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+        this.setupEventListeners();
+        this.setupWebSocket();
+        this.loadSettings();
+        this.showScreen('loadingScreen');
+        
+        // Подключение к серверу
+        wsClient.connect();
+        
+        // Запуск игрового цикла
+        this.gameLoop();
     }
 
     resizeCanvas() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.centerX = this.canvas.width / 2;
-        this.centerY = this.canvas.height / 2;
-        console.log('Canvas resized:', this.canvas.width, 'x', this.canvas.height);
-        console.log('Center:', this.centerX, this.centerY);
-    }
-
-    createBackgroundPattern() {
-        // Создаем гексагональную сетку как в Slither.io
-        const patternCanvas = document.createElement('canvas');
-        patternCanvas.width = this.gridSize * 2;
-        patternCanvas.height = this.gridSize * 2;
-        const patternCtx = patternCanvas.getContext('2d');
-        
-        // Рисуем гексагоны
-        patternCtx.strokeStyle = '#1a1a1a';
-        patternCtx.lineWidth = 1;
-        
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                const x = i * this.gridSize;
-                const y = j * this.gridSize;
-                
-                // Рисуем гексагон
-                patternCtx.beginPath();
-                for (let k = 0; k < 6; k++) {
-                    const angle = (k * Math.PI) / 3;
-                    const hexX = x + this.gridSize/2 + Math.cos(angle) * this.gridSize/3;
-                    const hexY = y + this.gridSize/2 + Math.sin(angle) * this.gridSize/3;
-                    
-                    if (k === 0) {
-                        patternCtx.moveTo(hexX, hexY);
-                    } else {
-                        patternCtx.lineTo(hexX, hexY);
-                    }
-                }
-                patternCtx.closePath();
-                patternCtx.stroke();
-            }
-        }
-        
-        this.backgroundPattern = this.ctx.createPattern(patternCanvas, 'repeat');
+        this.minimapCanvas.width = 200;
+        this.minimapCanvas.height = 200;
     }
 
     setupEventListeners() {
-        // Обработка движения мыши
+        // Изменение размера окна
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
+        // Мышь
         this.canvas.addEventListener('mousemove', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = e.clientX - rect.left;
-            this.mouse.y = e.clientY - rect.top;
+            this.mouse.x = e.clientX;
+            this.mouse.y = e.clientY;
         });
-
-        // Обработка касаний для мобильных устройств
-        this.canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            this.mouse.x = touch.clientX - rect.left;
-            this.mouse.y = touch.clientY - rect.top;
-        });
-
-        // Обработка клавиш
+        
+        // Клавиатура
         document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    this.boost = true;
+                    break;
+                case 'Escape':
+                    e.preventDefault();
+                    this.togglePause();
+                    break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
             if (e.code === 'Space') {
-                e.preventDefault();
-                this.handleBoost();
-            } else if (e.code === 'Escape') {
-                e.preventDefault();
-                this.togglePause();
+                this.boost = false;
             }
         });
-
-        // Обработка клика для ускорения
-        this.canvas.addEventListener('click', (e) => {
-            this.handleBoost();
+        
+        // Кнопки меню
+        document.getElementById('playBtn').addEventListener('click', () => {
+            this.showScreen('characterSetup');
+        });
+        
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            this.startGame();
+        });
+        
+        document.getElementById('backToMenuBtn').addEventListener('click', () => {
+            this.showScreen('mainMenu');
+        });
+        
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            this.togglePause();
+        });
+        
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            this.resumeGame();
+        });
+        
+        document.getElementById('exitToMenuBtn').addEventListener('click', () => {
+            this.exitToMenu();
+        });
+        
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            this.restartGame();
+        });
+        
+        document.getElementById('mainMenuBtn').addEventListener('click', () => {
+            this.showScreen('mainMenu');
+        });
+        
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            this.showScreen('settingsScreen');
+        });
+        
+        document.getElementById('pauseSettingsBtn').addEventListener('click', () => {
+            this.showScreen('settingsScreen');
+        });
+        
+        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+            this.saveSettings();
+        });
+        
+        document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+            this.showScreen('mainMenu');
+        });
+        
+        document.getElementById('leaderboardBtn').addEventListener('click', () => {
+            this.showLeaderboard();
+        });
+        
+        document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
+            this.hideLeaderboard();
+        });
+        
+        document.getElementById('howToPlayBtn').addEventListener('click', () => {
+            this.showScreen('howToPlayScreen');
+        });
+        
+        document.getElementById('closeHowToPlayBtn').addEventListener('click', () => {
+            this.showScreen('mainMenu');
+        });
+        
+        // Выбор скинов и голов
+        document.querySelectorAll('.skin-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.skin-option').forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+            });
+        });
+        
+        document.querySelectorAll('.head-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.head-option').forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+            });
+        });
+        
+        // Полноэкранный режим
+        document.addEventListener('fullscreenchange', () => {
+            this.resizeCanvas();
         });
     }
 
-    startGame(playerData) {
-        console.log('Starting game with player data:', playerData);
+    setupWebSocket() {
+        wsClient.on('connected', () => {
+            this.updateLoadingText('Подключено! Нажмите "Играть"');
+            this.showScreen('mainMenu');
+        });
         
-        // Проверяем границы мира
-        if (playerData.x < 0 || playerData.x > this.worldSize.width || 
-            playerData.y < 0 || playerData.y > this.worldSize.height) {
-            playerData.x = this.worldSize.width / 2;
-            playerData.y = this.worldSize.height / 2;
-        }
+        wsClient.on('disconnected', () => {
+            this.updateLoadingText('Соединение потеряно. Переподключение...');
+        });
         
-        // Сбрасываем позицию мыши в центр
-        this.mouse.x = this.centerX;
-        this.mouse.y = this.centerY;
-        console.log('Mouse reset to center');
+        wsClient.on('gameState', (data) => {
+            this.updateGameState(data);
+        });
         
-        // Добавляем игрока в коллекцию
-        this.players.set(playerData.id, playerData);
-        this.playerId = playerData.id;
+        wsClient.on('playerJoined', (data) => {
+            this.addPlayer(data);
+        });
         
-        // Создаем начальные сегменты змеи
-        if (!playerData.segments || playerData.segments.length === 0) {
-            console.log('Creating new segments for player:', playerData.name);
-            playerData.segments = [];
-            for (let i = 0; i < 3; i++) {
-                playerData.segments.push({
-                    x: playerData.x - i * 20,
-                    y: playerData.y
-                });
+        wsClient.on('playerLeft', (data) => {
+            this.removePlayer(data.id);
+        });
+        
+        wsClient.on('foodSpawned', (data) => {
+            this.addFood(data);
+        });
+        
+        wsClient.on('foodEaten', (data) => {
+            this.removeFood(data.id);
+            if (data.playerId === this.player?.id) {
+                this.playSound('eat');
+                this.createEatEffect(data.x, data.y);
             }
-            console.log('Created segments:', playerData.segments);
-        } else {
-            console.log('Player already has segments:', playerData.segments);
-            // Исправляем сегменты с координатами (0,0)
-            for (let segment of playerData.segments) {
-                if (segment.x === 0 && segment.y === 0) {
-                    segment.x = playerData.x;
-                    segment.y = playerData.y;
-                }
+        });
+        
+        wsClient.on('playerDied', (data) => {
+            if (data.id === this.player?.id) {
+                this.gameOver();
+            } else {
+                this.removePlayer(data.id);
+                this.createDeathEffect(data.x, data.y);
             }
-        }
+        });
         
-        // Проверяем границы для сегментов
-        for (let segment of playerData.segments) {
-            if (segment.x < 0) segment.x = 0;
-            if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
-            if (segment.y < 0) segment.y = 0;
-            if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
-        }
+        wsClient.on('leaderboardUpdate', (data) => {
+            this.updateLeaderboard(data);
+        });
         
-        // Устанавливаем камеру на игрока
-        this.camera.x = playerData.x - this.centerX;
-        this.camera.y = playerData.y - this.centerY;
-        
-        // Проверяем границы камеры
-        const maxX = this.worldSize.width - this.canvas.width;
-        const maxY = this.worldSize.height - this.canvas.height;
-        
-        if (this.camera.x < 0) this.camera.x = 0;
-        if (this.camera.x > maxX) this.camera.x = maxX;
-        if (this.camera.y < 0) this.camera.y = 0;
-        if (this.camera.y > maxY) this.camera.y = maxY;
-        
-        this.isPlaying = true;
-        this.isPaused = false;
-        
-        console.log('Player added to collection, total players:', this.players.size);
-        console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
-        
-        this.startGameLoop();
-        
-        console.log('Игра началась для игрока:', playerData.name);
+        wsClient.on('error', (error) => {
+            this.showNotification('Ошибка сервера: ' + error.message, 'error');
+        });
     }
 
-    stopGame() {
-        this.isPlaying = false;
-        this.players.clear();
-        this.foods.clear();
-        this.particles = [];
-        this.animations.clear();
+    updateLoadingText(text) {
+        const loadingText = document.getElementById('loadingText');
+        if (loadingText) {
+            loadingText.textContent = text;
+        }
+    }
+
+    showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.add('hidden');
+        });
+        document.getElementById(screenId).classList.remove('hidden');
+        this.gameState = screenId;
+    }
+
+    startGame() {
+        const playerName = document.getElementById('playerName').value || 'Игрок';
+        const selectedSkin = document.querySelector('.skin-option.active').dataset.skin;
+        const selectedHead = document.querySelector('.head-option.active').dataset.head;
+        
+        this.player = {
+            id: 'local',
+            name: playerName,
+            skin: selectedSkin,
+            head: selectedHead,
+            x: 0,
+            y: 0,
+            segments: [],
+            length: 10,
+            score: 0
+        };
+        
+        this.stats.startTime = Date.now();
+        this.stats.length = 10;
+        this.stats.score = 0;
+        
+        wsClient.joinGame({
+            name: playerName,
+            skin: selectedSkin,
+            head: selectedHead
+        });
+        
+        this.showScreen('gameScreen');
+        this.gameState = 'playing';
+        
+        if (this.settings.music) {
+            document.getElementById('bgMusic').play().catch(() => {});
+        }
+        
+        this.createCustomCursor();
+    }
+
+    createCustomCursor() {
+        const cursor = document.createElement('div');
+        cursor.className = 'game-cursor';
+        cursor.id = 'gameCursor';
+        document.body.appendChild(cursor);
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX - 10 + 'px';
+            cursor.style.top = e.clientY - 10 + 'px';
+        });
     }
 
     togglePause() {
-        if (this.isPlaying) {
-            this.isPaused = !this.isPaused;
-            if (this.isPaused) {
-                window.uiManager.showPauseScreen();
-            } else {
-                window.uiManager.hidePauseScreen();
-            }
+        if (this.gameState === 'playing') {
+            this.gameState = 'paused';
+            this.showScreen('pauseMenu');
         }
     }
 
-    pause() {
-        this.isPaused = true;
+    resumeGame() {
+        this.gameState = 'playing';
+        this.showScreen('gameScreen');
     }
 
-    resume() {
-        this.isPaused = false;
+    exitToMenu() {
+        wsClient.leaveGame();
+        this.gameState = 'menu';
+        this.showScreen('mainMenu');
+        this.removeCustomCursor();
     }
 
-    startGameLoop() {
-        const gameLoop = (timestamp) => {
-            if (!this.lastTime) this.lastTime = timestamp;
-            const deltaTime = timestamp - this.lastTime;
-            this.lastTime = timestamp;
-
-            if (this.isPlaying && !this.isPaused) {
-                this.update(deltaTime);
-                this.render();
-            }
-
-            requestAnimationFrame(gameLoop);
-        };
-        requestAnimationFrame(gameLoop);
-    }
-
-    update(deltaTime) {
-        // Обновляем игрока
-        const player = this.players.get(this.playerId);
-        if (player) {
-            this.updatePlayer(player, deltaTime);
-            this.updateSnakeSegments(player);
-            this.checkCollisions(player);
-        }
-
-        // Обновляем частицы
-        this.updateParticles(deltaTime);
-
-        // Обновляем анимации
-        this.updateAnimations(deltaTime);
-
-        // Обновляем UI
-        this.updateUI();
-    }
-
-    updatePlayer(player, deltaTime) {
-        // Проверяем, движется ли мышь
-        if (this.mouse.x === this.centerX && this.mouse.y === this.centerY) {
-            return; // Мышь в центре, не двигаемся
-        }
-
-        // Вычисляем направление к мыши
-        const worldMouseX = this.mouse.x + this.camera.x;
-        const worldMouseY = this.mouse.y + this.camera.y;
+    gameOver() {
+        this.gameState = 'gameOver';
+        this.stats.survivalTime = Math.floor((Date.now() - this.stats.startTime) / 1000);
         
-        const dx = worldMouseX - player.x;
-        const dy = worldMouseY - player.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // Минимальное расстояние для движения
-        if (distance < 10) {
-            return;
-        }
-
-        // Нормализуем направление
-        const dirX = dx / distance;
-        const dirY = dy / distance;
-
-        // Определяем скорость движения
-        const currentSpeed = player.boost ? this.boostSpeed : this.snakeSpeed;
-        const moveDistance = currentSpeed * (deltaTime / 16.67); // Нормализуем к 60 FPS
-
-        // Обновляем позицию головы
-        player.x += dirX * moveDistance;
-        player.y += dirY * moveDistance;
-
-        // Ограничиваем позицию границами мира
-        if (player.x < player.radius) player.x = player.radius;
-        if (player.x > this.worldSize.width - player.radius) player.x = this.worldSize.width - player.radius;
-        if (player.y < player.radius) player.y = this.worldSize.height - player.radius;
-        if (player.y > this.worldSize.height - player.radius) player.y = this.worldSize.height - player.radius;
-
-        // Обновляем камеру
-        this.updateCamera(player);
-
-        // Отправляем обновление на сервер
-        if (window.websocketManager && window.websocketManager.isConnected()) {
-            window.websocketManager.sendPlayerUpdate({
-                x: player.x,
-                y: player.y,
-                boost: player.boost
-            });
+        document.getElementById('finalLength').textContent = this.stats.length;
+        document.getElementById('finalScore').textContent = this.stats.score;
+        document.getElementById('survivalTime').textContent = this.formatTime(this.stats.survivalTime);
+        
+        this.showScreen('gameOverScreen');
+        this.removeCustomCursor();
+        
+        if (this.settings.soundEffects) {
+            document.getElementById('deathSound').play().catch(() => {});
         }
     }
 
-    updateSnakeSegments(player) {
-        if (!player.segments || player.segments.length === 0) return;
+    restartGame() {
+        this.showScreen('characterSetup');
+    }
 
-        // Проверяем границы для сегментов перед обновлением
-        for (let segment of player.segments) {
-            if (segment.x < 0) segment.x = 0;
-            if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
-            if (segment.y < 0) segment.y = 0;
-            if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
-        }
-
-        // Обновляем сегменты (следование за головой)
-        for (let i = player.segments.length - 1; i > 0; i--) {
-            const current = player.segments[i];
-            const target = player.segments[i - 1];
-            
-            const dx = target.x - current.x;
-            const dy = target.y - current.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance > 20) {
-                const moveDistance = distance - 20;
-                const dirX = dx / distance;
-                const dirY = dy / distance;
-                
-                current.x += dirX * moveDistance * 0.1;
-                current.y += dirY * moveDistance * 0.1;
-            }
-        }
-
-        // Первый сегмент следует за головой
-        if (player.segments.length > 0) {
-            const firstSegment = player.segments[0];
-            const dx = player.x - firstSegment.x;
-            const dy = player.y - firstSegment.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance > 20) {
-                const moveDistance = distance - 20;
-                const dirX = dx / distance;
-                const dirY = dy / distance;
-                
-                firstSegment.x += dirX * moveDistance * 0.1;
-                firstSegment.y += dirY * moveDistance * 0.1;
-            }
-        }
-
-        // Проверяем границы для сегментов после обновления
-        for (let segment of player.segments) {
-            if (segment.x < 0) segment.x = 0;
-            if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
-            if (segment.y < 0) segment.y = 0;
-            if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
+    removeCustomCursor() {
+        const cursor = document.getElementById('gameCursor');
+        if (cursor) {
+            cursor.remove();
         }
     }
 
-    checkCollisions(player) {
-        // Проверяем столкновения с едой
-        for (const [foodId, food] of this.foods) {
-            const dx = player.x - food.x;
-            const dy = player.y - food.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < player.radius + food.radius) {
-                this.collectFood(foodId, food);
-            }
-        }
-
-        // Проверяем столкновения с другими игроками
-        for (const [otherId, otherPlayer] of this.players) {
-            if (otherId === player.id) continue;
-            
-            // Проверяем столкновение головы с телом другого игрока
-            for (let i = 0; i < otherPlayer.segments.length; i++) {
-                const segment = otherPlayer.segments[i];
-                const dx = player.x - segment.x;
-                const dy = player.y - segment.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < player.radius + player.radius * 0.8) {
-                    // Игрок съел другого игрока
-                    this.eatPlayer(otherId, otherPlayer);
-                    break;
-                }
-            }
-        }
-    }
-
-    collectFood(foodId, food) {
-        // Увеличиваем размер игрока
-        const player = this.players.get(this.playerId);
-        if (player) {
-            player.radius += 0.5;
-            player.score += 10;
-            
-            // Добавляем новый сегмент
-            if (player.segments.length > 0) {
-                const lastSegment = player.segments[player.segments.length - 1];
-                player.segments.push({
-                    x: lastSegment.x,
-                    y: lastSegment.y
-                });
-            }
-            
-            // Создаем эффект сбора еды
-            this.createFoodCollectionEffect(food.x, food.y, food.color);
-        }
-        
-        // Удаляем еду
-        this.foods.delete(foodId);
-        
-        // Отправляем на сервер
-        if (window.websocketManager) {
-            window.websocketManager.sendFoodCollected(foodId);
-        }
-    }
-
-    eatPlayer(otherId, otherPlayer) {
-        const player = this.players.get(this.playerId);
-        if (player) {
-            // Увеличиваем размер за счет съеденного игрока
-            const bonusSize = otherPlayer.radius * 0.5;
-            player.radius += bonusSize;
-            player.score += otherPlayer.score;
-            
-            // Добавляем сегменты от съеденного игрока
-            const segmentsToAdd = Math.floor(otherPlayer.segments.length * 0.3);
-            for (let i = 0; i < segmentsToAdd; i++) {
-                if (player.segments.length > 0) {
-                    const lastSegment = player.segments[player.segments.length - 1];
-                    player.segments.push({
-                        x: lastSegment.x,
-                        y: lastSegment.y
-                    });
-                }
-            }
-            
-            // Создаем эффект съедения игрока
-            this.createPlayerEatenEffect(otherPlayer.x, otherPlayer.y, otherPlayer.color);
-        }
-        
-        // Удаляем съеденного игрока
-        this.players.delete(otherId);
-        
-        // Отправляем на сервер
-        if (window.websocketManager) {
-            window.websocketManager.sendPlayerEaten(otherId);
-        }
-    }
-
-    playerEaten(eater) {
-        // Игрок был съеден
-        this.createPlayerEatenEffect(this.players.get(this.playerId).x, this.players.get(this.playerId).y, this.players.get(this.playerId).color);
-        this.stopGame();
-        window.uiManager.showGameOver();
-    }
-
-    createFoodCollectionEffect(x, y, color) {
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const speed = 2 + Math.random() * 2;
-            
-            this.particles.push({
-                x: x,
-                y: y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                color: color,
-                size: 3 + Math.random() * 3,
-                life: 60,
-                maxLife: 60
-            });
-        }
-    }
-
-    createPlayerEatenEffect(x, y, color) {
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
-            const speed = 3 + Math.random() * 4;
-            
-            this.particles.push({
-                x: x,
-                y: y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                color: color,
-                size: 4 + Math.random() * 4,
-                life: 90,
-                maxLife: 90
-            });
-        }
-    }
-
-    updateParticles(deltaTime) {
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const particle = this.particles[i];
-            
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-            particle.life--;
-            
-            if (particle.life <= 0) {
-                this.particles.splice(i, 1);
-            }
-        }
-    }
-
-    updateCamera(player) {
-        // Плавное следование камеры за игроком
-        const targetX = player.x - this.centerX;
-        const targetY = player.y - this.centerY;
-        
-        const cameraSpeed = 0.1;
-        this.camera.x += (targetX - this.camera.x) * cameraSpeed;
-        this.camera.y += (targetY - this.camera.y) * cameraSpeed;
-        
-        // Ограничиваем камеру границами мира
-        const maxX = this.worldSize.width - this.canvas.width;
-        const maxY = this.worldSize.height - this.canvas.height;
-        
-        if (this.camera.x < 0) this.camera.x = 0;
-        if (this.camera.x > maxX) this.camera.x = maxX;
-        if (this.camera.y < 0) this.camera.y = 0;
-        if (this.camera.y > maxY) this.camera.y = maxY;
-    }
-
-    updateUI() {
-        const player = this.players.get(this.playerId);
-        if (player) {
-            window.uiManager.updateScore(player.segments.length, player.score);
-            window.uiManager.updatePlayersCount(this.players.size);
-        }
-    }
-
-    handleBoost() {
-        const player = this.players.get(this.playerId);
-        if (player && player.segments.length > 3) {
-            player.boost = true;
-            
-            // Уменьшаем длину при ускорении
-            if (player.segments.length > 3) {
-                player.segments.pop();
-            }
-            
-            // Отправляем на сервер
-            if (window.websocketManager) {
-                window.websocketManager.sendBoost(true);
-            }
-            
-            // Сбрасываем ускорение через некоторое время
-            setTimeout(() => {
-                if (player) {
-                    player.boost = false;
-                    if (window.websocketManager) {
-                        window.websocketManager.sendBoost(false);
-                    }
-                }
-            }, 200);
-        }
-    }
-
-    render() {
-        // Очищаем канвас
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Применяем трансформации камеры
-        this.ctx.save();
-        this.ctx.translate(-this.camera.x, -this.camera.y);
-        
-        // Рендерим фон
-        this.renderBackground();
-        
-        // Рендерим еду
-        this.renderFoods();
-        
-        // Рендерим игроков
-        this.renderPlayers();
-        
-        // Рендерим частицы
-        this.renderParticles();
-        
-        this.ctx.restore();
-    }
-
-    renderBackground() {
-        // Рендерим гексагональную сетку
-        if (this.backgroundPattern) {
-            this.ctx.fillStyle = this.backgroundPattern;
-            this.ctx.fillRect(0, 0, this.worldSize.width, this.worldSize.height);
-        }
-        
-        // Добавляем темный фон
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        this.ctx.fillRect(0, 0, this.worldSize.width, this.worldSize.height);
-        
-        console.log('Background rendered, world size:', this.worldSize.width, 'x', this.worldSize.height);
-    }
-
-    renderFoods() {
-        for (const food of this.foods.values()) {
-            this.ctx.save();
-            
-            // Создаем градиент для еды
-            const gradient = this.ctx.createRadialGradient(
-                food.x, food.y, 0,
-                food.x, food.y, food.radius
-            );
-            gradient.addColorStop(0, food.color);
-            gradient.addColorStop(1, this.darkenColor(food.color, 0.5));
-            
-            this.ctx.fillStyle = gradient;
-            this.ctx.beginPath();
-            this.ctx.arc(food.x, food.y, food.radius, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            // Добавляем свечение
-            this.ctx.shadowColor = food.color;
-            this.ctx.shadowBlur = 10;
-            this.ctx.beginPath();
-            this.ctx.arc(food.x, food.y, food.radius * 0.5, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            this.ctx.restore();
-        }
-    }
-
-    renderPlayers() {
-        console.log('=== РЕНДЕРИНГ ИГРОКОВ ===');
-        console.log('Всего игроков в коллекции:', this.players.size);
-        
-        for (const [id, player] of this.players) {
-            console.log('Рендерим игрока:', player.name, 'ID:', id);
-            console.log('Позиция игрока:', player.x, player.y);
-            console.log('Сегменты:', player.segments.length);
-            console.log('Радиус:', player.radius);
-            console.log('Камера:', this.camera.x, this.camera.y);
-            
-            const screenX = player.x - this.camera.x;
-            const screenY = player.y - this.camera.y;
-            console.log('Позиция на экране:', screenX, screenY);
-            console.log('Размеры экрана:', this.canvas.width, this.canvas.height);
-            
-            // Проверяем, находится ли игрок в видимой области
-            if (screenX + player.radius > 0 && screenX - player.radius < this.canvas.width &&
-                screenY + player.radius > 0 && screenY - player.radius < this.canvas.height) {
-                
-                console.log('Начинаем рендеринг игрока:', player.name);
-                this.renderPlayer(player);
-            }
-        }
-        
-        console.log('Render completed - Players:', this.players.size, 'Camera:', this.camera.x, this.camera.y, 'Player ID:', this.playerId);
-    }
-
-    renderPlayer(player) {
-        this.ctx.save();
-        
-        console.log('Начинаем рендеринг игрока:', player.name);
-        console.log('Сегменты для рендеринга:', player.segments.length);
-        
-        // Массив иконок голов
-        const headIcons = [
-            '🐍', '🐉', '⚔️', '💀', '🎓', '💎', '⛑️', '🪬', '👑', '👼', '😈', '🤖'
-        ];
-        
-        // Рендерим сегменты змеи
-        for (let i = player.segments.length - 1; i >= 0; i--) {
-            const segment = player.segments[i];
-            const segmentRadius = player.radius * (1 - i * 0.02);
-            
-            console.log(`Сегмент ${i}:`, segment.x, segment.y, 'радиус:', segmentRadius);
-            
-            if (segmentRadius > 2) {
-                const isHead = i === 0;
-                const baseColor = isHead ? player.headColor : player.color;
-                
-                // Для головы рисуем иконку, для остальных сегментов - круг
-                if (isHead && player.headType !== undefined && headIcons[player.headType]) {
-                    // Рендерим иконку головы
-                    this.ctx.font = `${segmentRadius * 1.5}px Arial`;
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText(headIcons[player.headType], segment.x, segment.y);
-                    
-                    console.log(`Голова отрендерена с иконкой:`, headIcons[player.headType], 'headType:', player.headType);
-                } else {
-                    // Создаем градиент для сегмента
-                    const gradient = this.ctx.createRadialGradient(
-                        segment.x, segment.y, 0,
-                        segment.x, segment.y, segmentRadius
-                    );
-                    
-                    gradient.addColorStop(0, baseColor);
-                    gradient.addColorStop(1, this.darkenColor(baseColor, 0.3));
-                    
-                    this.ctx.fillStyle = gradient;
-                    this.ctx.beginPath();
-                    this.ctx.arc(segment.x, segment.y, segmentRadius, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    
-                    // Добавляем обводку
-                    this.ctx.strokeStyle = this.darkenColor(baseColor, 0.5);
-                    this.ctx.lineWidth = 1;
-                    this.ctx.stroke();
-                    
-                    // Добавляем блик для головы (если нет иконки)
-                    if (isHead && (player.headType === undefined || !headIcons[player.headType])) {
-                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                        this.ctx.beginPath();
-                        this.ctx.arc(segment.x - segmentRadius * 0.3, segment.y - segmentRadius * 0.3, segmentRadius * 0.3, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    }
-                }
-                
-                console.log(`Сегмент ${i} отрендерен с цветом:`, baseColor);
-            } else {
-                console.log(`Сегмент ${i} слишком маленький, пропускаем`);
-            }
-        }
-        
-        // Рендерим имя игрока
-        if (player.name) {
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = '14px Orbitron';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(player.name, player.x, player.y - player.radius - 10);
-        }
-        
-        this.ctx.restore();
-        console.log('Рендеринг игрока завершен');
-    }
-
-    renderParticles() {
-        for (const particle of this.particles) {
-            this.ctx.save();
-            
-            const alpha = particle.life / particle.maxLife;
-            this.ctx.globalAlpha = alpha;
-            
-            this.ctx.fillStyle = particle.color;
-            this.ctx.beginPath();
-            this.ctx.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            this.ctx.restore();
-        }
-    }
-
-    darkenColor(color, factor) {
-        // Простая функция для затемнения цвета
-        const hex = color.replace('#', '');
-        const r = Math.floor(parseInt(hex.substr(0, 2), 16) * factor);
-        const g = Math.floor(parseInt(hex.substr(2, 2), 16) * factor);
-        const b = Math.floor(parseInt(hex.substr(4, 2), 16) * factor);
-        return `rgb(${r}, ${g}, ${b})`;
-    }
-
-    updateAnimations(deltaTime) {
-        for (const [id, animation] of this.animations) {
-            animation.update(deltaTime);
-            if (animation.isFinished) {
-                this.animations.delete(id);
-            }
-        }
-    }
-
-    // Методы для работы с сервером
     updateGameState(data) {
-        console.log('updateGameState called with:', data);
-        
         if (data.players) {
-            console.log('Updating players, count:', data.players.length);
-            
-            // Очищаем старых игроков
             this.players.clear();
-            
-            // Добавляем новых игроков
-            for (const playerData of data.players) {
-                console.log('Current player before update:', playerData.name);
-                
-                // Проверяем, есть ли у игрока сегменты
-                if (!playerData.segments || playerData.segments.length === 0) {
-                    playerData.segments = [
-                        { x: playerData.x, y: playerData.y },
-                        { x: playerData.x - 20, y: playerData.y },
-                        { x: playerData.x - 40, y: playerData.y }
-                    ];
+            data.players.forEach(player => {
+                this.players.set(player.id, player);
+                if (player.id === this.player?.id) {
+                    this.player = player;
+                    this.stats.length = player.length;
+                    this.stats.score = player.score;
+                    this.updateHUD();
                 }
-                
-                // Исправляем сегменты с координатами (0,0)
-                for (let segment of playerData.segments) {
-                    if (segment.x === 0 && segment.y === 0) {
-                        segment.x = playerData.x;
-                        segment.y = playerData.y;
-                    }
-                }
-                
-                this.players.set(playerData.id, playerData);
-                console.log('Added player to collection:', playerData.id, playerData.name, 'at', playerData.x, playerData.y);
-                
-                // Обновляем playerId если это наш игрок
-                if (playerData.name === this.players.get(this.playerId)?.name) {
-                    console.log('Player ID updated from', this.playerId, 'to', playerData.id);
-                    this.playerId = playerData.id;
-                }
-            }
-            
-            console.log('Final player collection size:', this.players.size);
+            });
         }
         
         if (data.foods) {
             this.foods.clear();
-            for (const food of data.foods) {
+            data.foods.forEach(food => {
                 this.foods.set(food.id, food);
-            }
+            });
         }
         
-        console.log('Received playerData for ID:', data.playerId, 'Segments:', data.segments);
-        
-        // Исправляем сегменты с координатами (0,0) если они пришли с сервера
-        if (data.segments) {
-            for (let segment of data.segments) {
-                if (segment.x === 0 && segment.y === 0) {
-                    segment.x = data.x || 0;
-                    segment.y = data.y || 0;
-                }
-            }
+        if (data.playerCount) {
+            document.getElementById('playersValue').textContent = data.playerCount;
         }
     }
 
-    addPlayer(playerData) {
-        this.players.set(playerData.id, playerData);
+    addPlayer(player) {
+        this.players.set(player.id, player);
     }
 
     removePlayer(playerId) {
         this.players.delete(playerId);
     }
 
-    addFood(foodData) {
-        this.foods.set(foodData.id, foodData);
+    addFood(food) {
+        this.foods.set(food.id, food);
     }
 
     removeFood(foodId) {
         this.foods.delete(foodId);
     }
 
-    gameOver(data) {
-        this.stopGame();
-        window.uiManager.showGameOver(data.finalScore, data.finalLength, data.killedBy);
+    updateHUD() {
+        document.getElementById('lengthValue').textContent = this.stats.length;
+        document.getElementById('scoreValue').textContent = this.stats.score;
+    }
+
+    updateLeaderboard(data) {
+        const leaderboardList = document.getElementById('leaderboardList');
+        const globalLeaderboard = document.getElementById('globalLeaderboard');
+        
+        if (leaderboardList) {
+            leaderboardList.innerHTML = '';
+            data.slice(0, 10).forEach((player, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                item.innerHTML = `
+                    <span class="rank">${index + 1}</span>
+                    <span class="name">${player.name}</span>
+                    <span class="score">${player.score}</span>
+                `;
+                leaderboardList.appendChild(item);
+            });
+        }
+        
+        if (globalLeaderboard) {
+            globalLeaderboard.innerHTML = '';
+            data.slice(0, 10).forEach((player, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                item.innerHTML = `
+                    <span class="rank">${index + 1}</span>
+                    <span class="name">${player.name}</span>
+                    <span class="score">${player.score}</span>
+                `;
+                globalLeaderboard.appendChild(item);
+            });
+        }
+    }
+
+    showLeaderboard() {
+        wsClient.getLeaderboard();
+        this.showScreen('leaderboardScreen');
+    }
+
+    hideLeaderboard() {
+        this.showScreen('mainMenu');
+    }
+
+    loadSettings() {
+        const saved = localStorage.getItem('snakeWorldSettings');
+        if (saved) {
+            this.settings = { ...this.settings, ...JSON.parse(saved) };
+        }
+        
+        // Применяем настройки к UI
+        document.getElementById('soundEffects').checked = this.settings.soundEffects;
+        document.getElementById('music').checked = this.settings.music;
+        document.getElementById('fullscreen').checked = this.settings.fullscreen;
+    }
+
+    saveSettings() {
+        this.settings.soundEffects = document.getElementById('soundEffects').checked;
+        this.settings.music = document.getElementById('music').checked;
+        this.settings.fullscreen = document.getElementById('fullscreen').checked;
+        
+        localStorage.setItem('snakeWorldSettings', JSON.stringify(this.settings));
+        this.showNotification('Настройки сохранены!', 'success');
+        this.showScreen('mainMenu');
+    }
+
+    playSound(soundName) {
+        if (!this.settings.soundEffects) return;
+        
+        const audio = document.getElementById(soundName + 'Sound');
+        if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+        }
+    }
+
+    createEatEffect(x, y) {
+        for (let i = 0; i < 8; i++) {
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1,
+                color: `hsl(${Math.random() * 60 + 120}, 100%, 50%)`
+            });
+        }
+    }
+
+    createDeathEffect(x, y) {
+        for (let i = 0; i < 20; i++) {
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 15,
+                vy: (Math.random() - 0.5) * 15,
+                life: 1,
+                color: `hsl(${Math.random() * 60}, 100%, 50%)`
+            });
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        document.getElementById('notifications').appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    gameLoop() {
+        if (this.gameState === 'playing' && this.player) {
+            // Обновление позиции игрока
+            const dx = this.mouse.x - this.canvas.width / 2;
+            const dy = this.mouse.y - this.canvas.height / 2;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 0) {
+                const speed = this.boost ? 8 : 4;
+                const angle = Math.atan2(dy, dx);
+                
+                this.player.x += Math.cos(angle) * speed;
+                this.player.y += Math.sin(angle) * speed;
+                
+                // Отправка позиции на сервер
+                wsClient.updatePosition(this.player.x, this.player.y, this.boost);
+            }
+            
+            // Обновление камеры
+            this.camera.x = this.player.x - this.canvas.width / 2;
+            this.camera.y = this.player.y - this.canvas.height / 2;
+        }
+        
+        // Обновление частиц
+        this.particles = this.particles.filter(particle => {
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.life -= 0.02;
+            return particle.life > 0;
+        });
+        
+        this.render();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+
+    render() {
+        // Очистка канваса
+        this.ctx.fillStyle = '#0a0a0a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Рисование сетки
+        this.drawGrid();
+        
+        // Рисование еды
+        this.foods.forEach(food => {
+            this.drawFood(food);
+        });
+        
+        // Рисование игроков
+        this.players.forEach(player => {
+            this.drawPlayer(player);
+        });
+        
+        // Рисование частиц
+        this.particles.forEach(particle => {
+            this.drawParticle(particle);
+        });
+        
+        // Рисование мини-карты
+        this.drawMinimap();
+    }
+
+    drawGrid() {
+        const gridSize = 50;
+        const offsetX = this.camera.x % gridSize;
+        const offsetY = this.camera.y % gridSize;
+        
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        this.ctx.lineWidth = 1;
+        
+        for (let x = -offsetX; x < this.canvas.width + gridSize; x += gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+            this.ctx.stroke();
+        }
+        
+        for (let y = -offsetY; y < this.canvas.height + gridSize; y += gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+        }
+    }
+
+    drawFood(food) {
+        const x = food.x - this.camera.x;
+        const y = food.y - this.camera.y;
+        
+        if (x < -20 || x > this.canvas.width + 20 || y < -20 || y > this.canvas.height + 20) {
+            return;
+        }
+        
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        
+        // Градиент
+        const gradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+        gradient.addColorStop(0, '#ffff00');
+        gradient.addColorStop(1, '#ffaa00');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Свечение
+        this.ctx.shadowColor = '#ffff00';
+        this.ctx.shadowBlur = 10;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.restore();
+    }
+
+    drawPlayer(player) {
+        const x = player.x - this.camera.x;
+        const y = player.y - this.camera.y;
+        
+        if (x < -100 || x > this.canvas.width + 100 || y < -100 || y > this.canvas.height + 100) {
+            return;
+        }
+        
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        
+        // Рисование сегментов змеи
+        if (player.segments && player.segments.length > 0) {
+            for (let i = player.segments.length - 1; i >= 0; i--) {
+                const segment = player.segments[i];
+                const segmentX = segment.x - this.camera.x;
+                const segmentY = segment.y - this.camera.y;
+                
+                if (segmentX < -20 || segmentX > this.canvas.width + 20 || 
+                    segmentY < -20 || segmentY > this.canvas.height + 20) {
+                    continue;
+                }
+                
+                const size = Math.max(3, 10 - i * 0.3);
+                const alpha = Math.max(0.3, 1 - i * 0.1);
+                
+                this.ctx.globalAlpha = alpha;
+                this.ctx.fillStyle = this.getPlayerColor(player, i === 0);
+                this.ctx.beginPath();
+                this.ctx.arc(segmentX - x, segmentY - y, size, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Свечение для головы
+                if (i === 0) {
+                    this.ctx.shadowColor = this.getPlayerColor(player, true);
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.beginPath();
+                    this.ctx.arc(segmentX - x, segmentY - y, size + 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+        }
+        
+        // Рисование имени игрока
+        if (player.name) {
+            this.ctx.globalAlpha = 0.8;
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '14px Orbitron';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(player.name, 0, -25);
+        }
+        
+        this.ctx.restore();
+    }
+
+    getPlayerColor(player, isHead = false) {
+        const colors = {
+            default: isHead ? '#00ff88' : '#00cc66',
+            rainbow: `hsl(${(Date.now() / 20) % 360}, 100%, 50%)`,
+            neon: '#00ff88',
+            fire: isHead ? '#ff4400' : '#ff6600'
+        };
+        
+        return colors[player.skin] || colors.default;
+    }
+
+    drawParticle(particle) {
+        const x = particle.x - this.camera.x;
+        const y = particle.y - this.camera.y;
+        
+        this.ctx.save();
+        this.ctx.globalAlpha = particle.life;
+        this.ctx.fillStyle = particle.color;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 3 * particle.life, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+    }
+
+    drawMinimap() {
+        this.minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.minimapCtx.fillRect(0, 0, 200, 200);
+        
+        const scale = 200 / 2000; // Масштаб мини-карты
+        
+        // Рисование еды на мини-карте
+        this.foods.forEach(food => {
+            const x = (food.x + 1000) * scale;
+            const y = (food.y + 1000) * scale;
+            
+            this.minimapCtx.fillStyle = '#ffff00';
+            this.minimapCtx.beginPath();
+            this.minimapCtx.arc(x, y, 2, 0, Math.PI * 2);
+            this.minimapCtx.fill();
+        });
+        
+        // Рисование игроков на мини-карте
+        this.players.forEach(player => {
+            const x = (player.x + 1000) * scale;
+            const y = (player.y + 1000) * scale;
+            
+            this.minimapCtx.fillStyle = player.id === this.player?.id ? '#00ff88' : '#ff0088';
+            this.minimapCtx.beginPath();
+            this.minimapCtx.arc(x, y, 3, 0, Math.PI * 2);
+            this.minimapCtx.fill();
+        });
+        
+        // Рисование игрока в центре
+        if (this.player) {
+            const x = (this.player.x + 1000) * scale;
+            const y = (this.player.y + 1000) * scale;
+            
+            this.minimapCtx.strokeStyle = '#00ff88';
+            this.minimapCtx.lineWidth = 2;
+            this.minimapCtx.beginPath();
+            this.minimapCtx.arc(x, y, 5, 0, Math.PI * 2);
+            this.minimapCtx.stroke();
+        }
     }
 }
 
-// Создаем глобальный экземпляр игрового движка
-window.gameEngine = null; 
+// Инициализация игры при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    window.game = new SnakeGame();
+}); 
