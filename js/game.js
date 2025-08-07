@@ -148,13 +148,13 @@ class GameEngine {
         // Добавляем игрока в коллекцию
         this.players.set(playerData.id, playerData);
         
-        // ИСПРАВЛЕНИЕ: Правильно устанавливаем камеру на игрока
-        this.camera.x = playerData.x - this.centerX / this.camera.zoom;
-        this.camera.y = playerData.y - this.centerY / this.camera.zoom;
+        // ИСПРАВЛЕНИЕ: Правильно устанавливаем камеру на игрока (упрощенная версия)
+        this.camera.x = playerData.x - this.centerX;
+        this.camera.y = playerData.y - this.centerY;
         
         // Ограничиваем камеру в пределах мира при инициализации
-        const maxX = this.worldSize.width - this.centerX / this.camera.zoom;
-        const maxY = this.worldSize.height - this.centerY / this.camera.zoom;
+        const maxX = this.worldSize.width - this.canvas.width;
+        const maxY = this.worldSize.height - this.canvas.height;
         
         this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
         this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
@@ -717,10 +717,18 @@ class GameEngine {
             for (const playerData of data.players) {
                 this.players.set(playerData.id, playerData);
                 
-                // Если это наш игрок, обновляем playerId
+                // ИСПРАВЛЕНИЕ: Обновляем playerId если это наш игрок
                 if (currentPlayer && playerData.name === currentPlayer.name) {
+                    console.log('Обновляем playerId с', this.playerId, 'на', playerData.id);
                     this.playerId = playerData.id;
                 }
+            }
+            
+            // ИСПРАВЛЕНИЕ: Если playerId не найден, но есть игроки, берем первого
+            if (!this.players.has(this.playerId) && this.players.size > 0) {
+                const firstPlayer = this.players.values().next().value;
+                console.log('PlayerId не найден, устанавливаем первого игрока:', firstPlayer.id);
+                this.playerId = firstPlayer.id;
             }
         }
         
