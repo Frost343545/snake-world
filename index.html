@@ -3,40 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake World - Многопользовательская игра</title>
+    <title>Snake World - РњРЅРѕРіРѕРїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєР°СЏ РёРіСЂР°</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Загрузочный экран -->
+    <!-- Р—Р°РіСЂСѓР·РѕС‡РЅС‹Р№ СЌРєСЂР°РЅ -->
     <div id="loadingScreen" class="screen">
         <div class="loading-content">
             <h1 class="game-title">SNAKE WORLD</h1>
             <div class="loading-spinner"></div>
-            <p id="loadingText">Подключение к серверу...</p>
+            <p id="loadingText">РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...</p>
         </div>
     </div>
 
-    <!-- Главное меню -->
+    <!-- Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ -->
     <div id="mainMenu" class="screen hidden">
         <div class="menu-content">
             <h1 class="game-title">SNAKE WORLD</h1>
             <div class="menu-buttons">
-                <button id="playBtn" class="menu-btn">Играть</button>
-                <button id="settingsBtn" class="menu-btn">Настройки</button>
-                <button id="leaderboardBtn" class="menu-btn">Таблица лидеров</button>
-                <button id="howToPlayBtn" class="menu-btn">Как играть</button>
+                <button id="playBtn" class="menu-btn">РРіСЂР°С‚СЊ</button>
+                <button id="settingsBtn" class="menu-btn">РќР°СЃС‚СЂРѕР№РєРё</button>
+                <button id="leaderboardBtn" class="menu-btn">РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ</button>
+                <button id="howToPlayBtn" class="menu-btn">РљР°Рє РёРіСЂР°С‚СЊ</button>
             </div>
         </div>
     </div>
 
-    <!-- Настройка персонажа -->
+    <!-- РќР°СЃС‚СЂРѕР№РєР° РїРµСЂСЃРѕРЅР°Р¶Р° -->
     <div id="characterSetup" class="screen hidden">
         <div class="setup-content">
-            <h2>Настройка персонажа</h2>
+            <h2>РќР°СЃС‚СЂРѕР№РєР° РїРµСЂСЃРѕРЅР°Р¶Р°</h2>
             
             <div class="setup-section">
-                <h3>Выберите скин змеи</h3>
+                <h3>Р’С‹Р±РµСЂРёС‚Рµ С‚РёРї Р·РјРµРё</h3>
                 <div class="skin-selector">
                     <div class="skin-option active" data-skin="default">
                         <div class="skin-preview default-skin"></div>
@@ -54,7 +54,7 @@
             </div>
 
             <div class="setup-section">
-                <h3>Выберите голову</h3>
+                <h3>Р’С‹Р±РµСЂРёС‚Рµ РіРѕР»РѕРІСѓ</h3>
                 <div class="head-selector">
                     <div class="head-option active" data-head="default">
                         <div class="head-preview default-head"></div>
@@ -72,18 +72,18 @@
             </div>
 
             <div class="setup-section">
-                <h3>Имя игрока</h3>
-                <input type="text" id="playerName" placeholder="Введите имя" maxlength="15" value="Игрок">
+                <h3>РРјСЏ РёРіСЂРѕРєР°</h3>
+                <input type="text" id="playerName" placeholder="Р’РІРµРґРёС‚Рµ РёРјСЏ" maxlength="15" value="РРіСЂРѕРє">
             </div>
 
             <div class="setup-buttons">
-                <button id="backToMenuBtn" class="setup-btn">Назад</button>
-                <button id="startGameBtn" class="setup-btn primary">Начать игру</button>
+                <button id="backToMenuBtn" class="setup-btn">РќР°Р·Р°Рґ</button>
+                <button id="startGameBtn" class="setup-btn primary">РќР°С‡Р°С‚СЊ РёРіСЂСѓ</button>
             </div>
         </div>
     </div>
 
-    <!-- Игровой экран -->
+    <!-- РРіСЂРѕРІРѕР№ СЌРєСЂР°РЅ -->
     <div id="gameScreen" class="screen hidden">
         <canvas id="gameCanvas"></canvas>
         
@@ -91,186 +91,132 @@
         <div class="hud">
             <div class="hud-left">
                 <div class="hud-stat">
-                    <span class="stat-label">Длина:</span>
+                    <span class="stat-label">Р”Р»РёРЅР°:</span>
                     <span id="lengthValue" class="stat-value">0</span>
                 </div>
                 <div class="hud-stat">
-                    <span class="stat-label">Очки:</span>
+                    <span class="stat-label">РЎС‡РµС‚:</span>
                     <span id="scoreValue" class="stat-value">0</span>
                 </div>
-            </div>
-            
-            <div class="hud-center">
                 <div class="hud-stat">
-                    <span class="stat-label">Игроков:</span>
-                    <span id="playersValue" class="stat-value">0</span>
+                    <span class="stat-label">РРіСЂРѕРєРё:</span>
+                    <span id="playerCount" class="stat-value">0</span>
                 </div>
             </div>
             
             <div class="hud-right">
-                <button id="pauseBtn" class="hud-btn"></button>
+                <div class="minimap-container">
+                    <canvas id="minimapCanvas"></canvas>
+                </div>
+                <div class="leaderboard-mini">
+                    <h4>РўРѕРї РёРіСЂРѕРєРѕРІ</h4>
+                    <div id="leaderboardList"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Мини-карта -->
-        <div id="minimap" class="minimap">
-            <canvas id="minimapCanvas"></canvas>
-        </div>
-
-        <!-- Таблица лидеров в игре -->
-        <div id="gameLeaderboard" class="game-leaderboard">
-            <h3>Топ игроков</h3>
-            <div id="leaderboardList"></div>
-        </div>
+        <!-- РЈРІРµРґРѕРјР»РµРЅРёСЏ -->
+        <div id="notifications" class="notifications"></div>
     </div>
 
-    <!-- Пауза -->
-    <div id="pauseMenu" class="screen hidden">
+    <!-- Р­РєСЂР°РЅ РїР°СѓР·С‹ -->
+    <div id="pauseScreen" class="screen hidden">
         <div class="pause-content">
-            <h2>Пауза</h2>
+            <h2>РРіСЂР° РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅР°</h2>
             <div class="pause-buttons">
-                <button id="resumeBtn" class="pause-btn">Продолжить</button>
-                <button id="pauseSettingsBtn" class="pause-btn">Настройки</button>
-                <button id="exitToMenuBtn" class="pause-btn">Выйти в меню</button>
+                <button id="resumeBtn" class="pause-btn">РџСЂРѕРґРѕР»Р¶РёС‚СЊ</button>
+                <button id="pauseMenuBtn" class="pause-btn">Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ</button>
             </div>
         </div>
     </div>
 
-    <!-- Игра окончена -->
+    <!-- Р­РєСЂР°РЅ РѕРєРѕРЅС‡Р°РЅРёСЏ РёРіСЂС‹ -->
     <div id="gameOverScreen" class="screen hidden">
         <div class="gameover-content">
-            <h2>Игра окончена</h2>
-            <div class="gameover-stats">
-                <div class="stat">
-                    <span class="stat-label">Ваша длина:</span>
-                    <span id="finalLength" class="stat-value">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Ваши очки:</span>
-                    <span id="finalScore" class="stat-value">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Время выживания:</span>
-                    <span id="survivalTime" class="stat-value">0:00</span>
-                </div>
+            <h2>РРіСЂР° РѕРєРѕРЅС‡РµРЅР°</h2>
+            <div class="final-stats">
+                <p>Р¤РёРЅР°Р»СЊРЅС‹Р№ СЃС‡РµС‚: <span id="finalScore">0</span></p>
+                <p>РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР°: <span id="finalLength">0</span></p>
             </div>
             <div class="gameover-buttons">
-                <button id="playAgainBtn" class="gameover-btn">Играть снова</button>
-                <button id="mainMenuBtn" class="gameover-btn">Главное меню</button>
+                <button id="playAgainBtn" class="gameover-btn">РРіСЂР°С‚СЊ СЃРЅРѕРІР°</button>
+                <button id="gameoverMenuBtn" class="gameover-btn">Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ</button>
             </div>
         </div>
     </div>
 
-    <!-- Как играть -->
+    <!-- РљР°Рє РёРіСЂР°С‚СЊ -->
     <div id="howToPlayScreen" class="screen hidden">
         <div class="howtoplay-content">
-            <h2>Как играть</h2>
-            
-            <div class="howtoplay-section">
-                <h3>Управление</h3>
+            <h2>РљР°Рє РёРіСЂР°С‚СЊ</h2>
+            <div class="controls-info">
+                <h3>РЈРїСЂР°РІР»РµРЅРёРµ:</h3>
                 <ul>
-                    <li><strong>Мышь:</strong> Управляйте направлением движения</li>
-                    <li><strong>Пробел:</strong> Ускорение (потребляет длину)</li>
-                    <li><strong>ESC:</strong> Пауза</li>
+                    <li><strong>РњС‹С€СЊ</strong> - СѓРїСЂР°РІР»РµРЅРёРµ РґРІРёР¶РµРЅРёРµРј Р·РјРµРё</li>
+                    <li><strong>РџСЂРѕР±РµР»</strong> - СѓСЃРєРѕСЂРµРЅРёРµ (РїРѕС‚СЂРµР±Р»СЏРµС‚ РґР»РёРЅСѓ)</li>
+                    <li><strong>ESC</strong> - РїР°СѓР·Р°</li>
+                </ul>
+                
+                <h3>Р¦РµР»СЊ РёРіСЂС‹:</h3>
+                <ul>
+                    <li>РЎРѕР±РёСЂР°Р№С‚Рµ РµРґСѓ РґР»СЏ СЂРѕСЃС‚Р°</li>
+                    <li>РР·Р±РµРіР°Р№С‚Рµ СЃС‚РѕР»РєРЅРѕРІРµРЅРёР№ СЃ РґСЂСѓРіРёРјРё Р·РјРµСЏРјРё</li>
+                    <li>РЎС‚Р°РЅСЊС‚Рµ СЃР°РјС‹Рј Р±РѕР»СЊС€РёРј РёРіСЂРѕРєРѕРј!</li>
                 </ul>
             </div>
-
-            <div class="howtoplay-section">
-                <h3>Цель игры</h3>
-                <p>Собирайте еду, чтобы расти и становиться длиннее. Избегайте столкновений с другими змеями и стенами.</p>
-            </div>
-
-            <div class="howtoplay-section">
-                <h3>Советы</h3>
-                <ul>
-                    <li>Используйте ускорение осторожно - оно уменьшает вашу длину</li>
-                    <li>Следите за мини-картой</li>
-                    <li>Большие змеи могут съесть вас</li>
-                    <li>Маленькие змеи - легкая добыча</li>
-                </ul>
-            </div>
-
-            <button id="closeHowToPlayBtn" class="close-btn"></button>
+            <button id="backFromHowToPlay" class="back-btn">РќР°Р·Р°Рґ</button>
         </div>
     </div>
 
-    <!-- Настройки -->
+    <!-- РќР°СЃС‚СЂРѕР№РєРё -->
     <div id="settingsScreen" class="screen hidden">
         <div class="settings-content">
-            <h2>Настройки</h2>
-            
+            <h2>РќР°СЃС‚СЂРѕР№РєРё</h2>
             <div class="settings-section">
-                <h3>Персонаж</h3>
-                <div class="setting-item">
-                    <label>Имя игрока:</label>
-                    <input type="text" id="settingsPlayerName" placeholder="Введите имя">
-                </div>
-                <div class="setting-item">
-                    <label>Скин змеи:</label>
-                    <select id="settingsSkin">
-                        <option value="default">Обычный</option>
-                        <option value="rainbow">Радужный</option>
-                        <option value="neon">Неоновый</option>
-                        <option value="fire">Огненный</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <label>Голова змеи:</label>
-                    <select id="settingsHead">
-                        <option value="default">Обычная</option>
-                        <option value="crown">Корона</option>
-                        <option value="devil">Дьявол</option>
-                        <option value="angel">Ангел</option>
-                    </select>
-                </div>
+                <h3>Р—РІСѓРє</h3>
+                <label>
+                    <input type="checkbox" id="soundEnabled" checked>
+                    Р’РєР»СЋС‡РёС‚СЊ Р·РІСѓРєРё
+                </label>
+                <label>
+                    <input type="range" id="soundVolume" min="0" max="100" value="50">
+                    Р“СЂРѕРјРєРѕСЃС‚СЊ
+                </label>
             </div>
-
             <div class="settings-section">
-                <h3>Игровые настройки</h3>
-                <div class="setting-item">
-                    <label>Звуковые эффекты:</label>
-                    <input type="checkbox" id="soundEffects" checked>
-                </div>
-                <div class="setting-item">
-                    <label>Музыка:</label>
-                    <input type="checkbox" id="music" checked>
-                </div>
-                <div class="setting-item">
-                    <label>Полноэкранный режим:</label>
-                    <input type="checkbox" id="fullscreen">
-                </div>
+                <h3>Р“СЂР°С„РёРєР°</h3>
+                <label>
+                    <input type="checkbox" id="particlesEnabled" checked>
+                    Р­С„С„РµРєС‚С‹ С‡Р°СЃС‚РёС†
+                </label>
+                <label>
+                    <input type="checkbox" id="animationsEnabled" checked>
+                    РђРЅРёРјР°С†РёРё
+                </label>
             </div>
-
-            <div class="settings-buttons">
-                <button id="saveSettingsBtn" class="settings-btn">Сохранить</button>
-                <button id="cancelSettingsBtn" class="settings-btn">Отмена</button>
-            </div>
+            <button id="backFromSettings" class="back-btn">РќР°Р·Р°Рґ</button>
         </div>
     </div>
 
-    <!-- Таблица лидеров -->
+    <!-- РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ -->
     <div id="leaderboardScreen" class="screen hidden">
         <div class="leaderboard-content">
-            <h2>Таблица лидеров</h2>
-            <div id="globalLeaderboard"></div>
-            <button id="closeLeaderboardBtn" class="close-btn"></button>
+            <h2>РўР°Р±Р»РёС†Р° Р»РёРґРµСЂРѕРІ</h2>
+            <div id="leaderboardTable"></div>
+            <button id="backFromLeaderboard" class="back-btn">РќР°Р·Р°Рґ</button>
         </div>
     </div>
 
-    <!-- Уведомления -->
-    <div id="notifications"></div>
-
-    <!-- Аудио элементы -->
-    <audio id="bgMusic" loop>
+    <!-- РђСѓРґРёРѕ -->
+    <audio id="backgroundMusic" loop>
         <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A" type="audio/mpeg">
     </audio>
+    
     <audio id="eatSound">
         <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A" type="audio/mpeg">
     </audio>
-    <audio id="deathSound">
-        <source src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A" type="audio/mpeg">
-    </audio>
 
+    <!-- РЎРєСЂРёРїС‚С‹ -->
     <script src="js/websocket.js"></script>
     <script src="js/game.js"></script>
 </body>
