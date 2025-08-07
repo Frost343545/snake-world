@@ -480,4 +480,3 @@ server.listen(PORT, () => {
     console.log(`Игровой мир: ${gameState.worldSize.width}x${gameState.worldSize.height}`);
     console.log(`Максимум еды: ${gameState.maxFood}`);
 }); 
-}); 
