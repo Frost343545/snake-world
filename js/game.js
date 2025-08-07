@@ -134,6 +134,15 @@ class GameEngine {
             console.log('Created segments:', playerData.segments);
         } else {
             console.log('Player already has segments:', playerData.segments);
+            // ИСПРАВЛЕНИЕ: Проверяем и исправляем сегменты с координатами (0,0)
+            for (let i = 0; i < playerData.segments.length; i++) {
+                const segment = playerData.segments[i];
+                if (segment.x === 0 && segment.y === 0) {
+                    console.log('Fixing segment', i, 'with coordinates (0,0)');
+                    segment.x = playerData.x;
+                    segment.y = playerData.y;
+                }
+            }
         }
         
         // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
@@ -736,6 +745,19 @@ class GameEngine {
             this.players.clear();
             for (const playerData of data.players) {
                 console.log('Received playerData for ID:', playerData.id, 'Segments:', playerData.segments);
+                
+                // ИСПРАВЛЕНИЕ: Проверяем и исправляем сегменты с координатами (0,0)
+                if (playerData.segments) {
+                    for (let i = 0; i < playerData.segments.length; i++) {
+                        const segment = playerData.segments[i];
+                        if (segment.x === 0 && segment.y === 0) {
+                            console.log('Fixing segment', i, 'with coordinates (0,0) in updateGameState');
+                            segment.x = playerData.x;
+                            segment.y = playerData.y;
+                        }
+                    }
+                }
+                
                 this.players.set(playerData.id, playerData);
                 
                 // ИСПРАВЛЕНИЕ: Обновляем playerId если это наш игрок
