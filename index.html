@@ -119,8 +119,17 @@
         <div id="pauseScreen" class="pause-screen hidden">
             <div class="pause-content">
                 <h2>Пауза</h2>
-                <button id="resumeBtn" class="menu-btn primary-btn">Продолжить</button>
-                <button id="quitGameBtn" class="menu-btn secondary-btn">Выйти</button>
+                <div class="pause-buttons">
+                    <button id="resumeBtn" class="menu-btn primary-btn">
+                        <i class="fas fa-play"></i> Продолжить
+                    </button>
+                    <button id="settingsBtn" class="menu-btn secondary-btn">
+                        <i class="fas fa-cog"></i> Настройки
+                    </button>
+                    <button id="quitGameBtn" class="menu-btn secondary-btn">
+                        <i class="fas fa-home"></i> Выйти в меню
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -170,13 +179,61 @@
         </div>
     </div>
 
+    <!-- Модальное окно настроек -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Настройки</h2>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3>Персонаж</h3>
+                    <div class="setting-item">
+                        <label>Имя игрока:</label>
+                        <input type="text" id="settingsPlayerName" placeholder="Введите ваше имя" maxlength="15">
+                    </div>
+                    <div class="setting-item">
+                        <label>Скин змеи:</label>
+                        <div class="settings-skin-grid" id="settingsSkinGrid">
+                            <!-- Скины будут добавлены динамически -->
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>Голова змеи:</label>
+                        <div class="settings-head-grid" id="settingsHeadGrid">
+                            <!-- Головы будут добавлены динамически -->
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Игровые настройки</h3>
+                    <div class="setting-item">
+                        <label>Звуковые эффекты:</label>
+                        <input type="checkbox" id="soundEnabled" checked>
+                    </div>
+                    <div class="setting-item">
+                        <label>Музыка:</label>
+                        <input type="checkbox" id="musicEnabled" checked>
+                    </div>
+                    <div class="setting-item">
+                        <label>Полноэкранный режим:</label>
+                        <input type="checkbox" id="fullscreenEnabled">
+                    </div>
+                </div>
+                <div class="settings-buttons">
+                    <button id="saveSettingsBtn" class="menu-btn primary-btn">Сохранить</button>
+                    <button id="cancelSettingsBtn" class="menu-btn secondary-btn">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Уведомления -->
     <div id="notificationContainer" class="notification-container"></div>
 
     <!-- Скрипты -->
-    <script src="js/websocket.js?v=29"></script>
-    <script src="js/game.js?v=29"></script>
-    <script src="js/ui.js?v=29"></script>
-    <script src="js/main.js?v=29"></script>
+    <script src="js/websocket.js?v=30"></script>
+    <script src="js/game.js?v=30"></script>
+    <script src="js/ui.js?v=30"></script>
+    <script src="js/main.js?v=30"></script>
 </body>
 </html> 

@@ -11,7 +11,7 @@ class GameEngine {
         this.particles = [];
         
         // Игровые настройки
-        this.worldSize = { width: 5000, height: 5000 };
+        this.worldSize = { width: 10000, height: 10000 };
         this.camera = { x: 0, y: 0, zoom: 1 };
         this.mouse = { x: 0, y: 0 };
         

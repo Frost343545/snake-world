@@ -85,6 +85,37 @@ class UIManager {
             });
         }
 
+        // Кнопка настроек в паузе
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                this.showSettings();
+            });
+        }
+
+        // Кнопки настроек
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        if (saveSettingsBtn) {
+            saveSettingsBtn.addEventListener('click', () => {
+                this.saveSettingsFromModal();
+            });
+        }
+
+        const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+        if (cancelSettingsBtn) {
+            cancelSettingsBtn.addEventListener('click', () => {
+                this.hideSettings();
+            });
+        }
+
+        // Поле имени в настройках
+        const settingsPlayerName = document.getElementById('settingsPlayerName');
+        if (settingsPlayerName) {
+            settingsPlayerName.addEventListener('input', (e) => {
+                this.playerName = e.target.value.trim();
+            });
+        }
+
         // Кнопки игрового экрана
         const backToMenuFromGameBtn = document.getElementById('backToMenuFromGameBtn');
         if (backToMenuFromGameBtn) {
@@ -129,20 +160,7 @@ class UIManager {
             });
         }
 
-        // Кнопки настроек
-        const settingsBtn = document.getElementById('settingsBtn');
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => {
-                this.showSettings();
-            });
-        }
 
-        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-        if (closeSettingsBtn) {
-            closeSettingsBtn.addEventListener('click', () => {
-                this.hideSettings();
-            });
-        }
     }
 
     createSkinOptions() {
@@ -417,6 +435,16 @@ class UIManager {
     }
 
     showSettings() {
+        // Загружаем текущие настройки в модальное окно
+        const settingsPlayerName = document.getElementById('settingsPlayerName');
+        if (settingsPlayerName) {
+            settingsPlayerName.value = this.playerName;
+        }
+        
+        // Создаем опции скинов и голов для настроек
+        this.createSettingsSkinOptions();
+        this.createSettingsHeadOptions();
+        
         const settingsModal = document.getElementById('settingsModal');
         if (settingsModal) {
             settingsModal.classList.remove('hidden');
@@ -428,6 +456,74 @@ class UIManager {
         if (settingsModal) {
             settingsModal.classList.add('hidden');
         }
+    }
+
+    saveSettingsFromModal() {
+        // Сохраняем настройки из модального окна
+        const settingsPlayerName = document.getElementById('settingsPlayerName');
+        if (settingsPlayerName) {
+            this.playerName = settingsPlayerName.value.trim();
+        }
+        
+        this.saveSettings();
+        this.hideSettings();
+        this.showNotification('Настройки сохранены!', 'success');
+    }
+
+    createSettingsSkinOptions() {
+        const container = document.getElementById('settingsSkinGrid');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        this.skins.forEach((skin, index) => {
+            const option = document.createElement('div');
+            option.className = `skin-option ${index === this.selectedSkin ? 'selected' : ''}`;
+            option.style.backgroundColor = skin.color;
+            option.title = skin.name;
+            
+            option.addEventListener('click', () => {
+                this.selectSkin(index);
+                this.updateSettingsSkinSelection();
+            });
+            
+            container.appendChild(option);
+        });
+    }
+
+    createSettingsHeadOptions() {
+        const container = document.getElementById('settingsHeadGrid');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        this.heads.forEach((head, index) => {
+            const option = document.createElement('div');
+            option.className = `head-option ${index === this.selectedHead ? 'selected' : ''}`;
+            option.textContent = head.icon;
+            option.title = head.name;
+            
+            option.addEventListener('click', () => {
+                this.selectHead(index);
+                this.updateSettingsHeadSelection();
+            });
+            
+            container.appendChild(option);
+        });
+    }
+
+    updateSettingsSkinSelection() {
+        const options = document.querySelectorAll('#settingsSkinGrid .skin-option');
+        options.forEach((option, index) => {
+            option.classList.toggle('selected', index === this.selectedSkin);
+        });
+    }
+
+    updateSettingsHeadSelection() {
+        const options = document.querySelectorAll('#settingsHeadGrid .head-option');
+        options.forEach((option, index) => {
+            option.classList.toggle('selected', index === this.selectedHead);
+        });
     }
 
     toggleFullscreen() {

@@ -16,8 +16,8 @@ app.use(express.static(path.join(__dirname)));
 const gameState = {
     players: new Map(),
     foods: new Map(),
-    worldSize: { width: 5000, height: 5000 },
-    maxFood: 100
+    worldSize: { width: 10000, height: 10000 },
+    maxFood: 200
 };
 
 // Генерация ID
