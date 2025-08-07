@@ -94,15 +94,11 @@ class SnakeGame {
             this.showScreen('mainMenu');
         });
         
-        document.getElementById('pauseBtn').addEventListener('click', () => {
-            this.togglePause();
-        });
-        
         document.getElementById('resumeBtn').addEventListener('click', () => {
             this.resumeGame();
         });
         
-        document.getElementById('exitToMenuBtn').addEventListener('click', () => {
+        document.getElementById('pauseMenuBtn').addEventListener('click', () => {
             this.exitToMenu();
         });
         
@@ -110,7 +106,7 @@ class SnakeGame {
             this.restartGame();
         });
         
-        document.getElementById('mainMenuBtn').addEventListener('click', () => {
+        document.getElementById('gameoverMenuBtn').addEventListener('click', () => {
             this.showScreen('mainMenu');
         });
         
@@ -118,31 +114,23 @@ class SnakeGame {
             this.showScreen('settingsScreen');
         });
         
-        document.getElementById('pauseSettingsBtn').addEventListener('click', () => {
-            this.showScreen('settingsScreen');
-        });
-        
-        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-            this.saveSettings();
-        });
-        
-        document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+        document.getElementById('backFromSettings').addEventListener('click', () => {
             this.showScreen('mainMenu');
         });
         
         document.getElementById('leaderboardBtn').addEventListener('click', () => {
-            this.showLeaderboard();
+            this.showScreen('leaderboardScreen');
         });
         
-        document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
-            this.hideLeaderboard();
+        document.getElementById('backFromLeaderboard').addEventListener('click', () => {
+            this.showScreen('mainMenu');
         });
         
         document.getElementById('howToPlayBtn').addEventListener('click', () => {
             this.showScreen('howToPlayScreen');
         });
         
-        document.getElementById('closeHowToPlayBtn').addEventListener('click', () => {
+        document.getElementById('backFromHowToPlay').addEventListener('click', () => {
             this.showScreen('mainMenu');
         });
         
@@ -425,15 +413,27 @@ class SnakeGame {
         }
         
         // Применяем настройки к UI
-        document.getElementById('soundEffects').checked = this.settings.soundEffects;
-        document.getElementById('music').checked = this.settings.music;
-        document.getElementById('fullscreen').checked = this.settings.fullscreen;
+        const soundEnabled = document.getElementById('soundEnabled');
+        const soundVolume = document.getElementById('soundVolume');
+        const particlesEnabled = document.getElementById('particlesEnabled');
+        const animationsEnabled = document.getElementById('animationsEnabled');
+        
+        if (soundEnabled) soundEnabled.checked = this.settings.soundEffects;
+        if (soundVolume) soundVolume.value = this.settings.soundVolume || 50;
+        if (particlesEnabled) particlesEnabled.checked = this.settings.particlesEnabled;
+        if (animationsEnabled) animationsEnabled.checked = this.settings.animationsEnabled;
     }
 
     saveSettings() {
-        this.settings.soundEffects = document.getElementById('soundEffects').checked;
-        this.settings.music = document.getElementById('music').checked;
-        this.settings.fullscreen = document.getElementById('fullscreen').checked;
+        const soundEnabled = document.getElementById('soundEnabled');
+        const soundVolume = document.getElementById('soundVolume');
+        const particlesEnabled = document.getElementById('particlesEnabled');
+        const animationsEnabled = document.getElementById('animationsEnabled');
+        
+        if (soundEnabled) this.settings.soundEffects = soundEnabled.checked;
+        if (soundVolume) this.settings.soundVolume = parseInt(soundVolume.value);
+        if (particlesEnabled) this.settings.particlesEnabled = particlesEnabled.checked;
+        if (animationsEnabled) this.settings.animationsEnabled = animationsEnabled.checked;
         
         localStorage.setItem('snakeWorldSettings', JSON.stringify(this.settings));
         this.showNotification('Настройки сохранены!', 'success');
