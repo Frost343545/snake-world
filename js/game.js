@@ -122,6 +122,7 @@ class GameEngine {
         
         // Инициализируем начальные сегменты змеи
         if (!playerData.segments || playerData.segments.length === 0) {
+            console.log('Creating new segments for player:', playerData.name);
             playerData.segments = [];
             // Создаем начальные сегменты змеи (все в одной точке для начала)
             for (let i = 0; i < 3; i++) {
@@ -130,6 +131,9 @@ class GameEngine {
                     y: playerData.y
                 });
             }
+            console.log('Created segments:', playerData.segments);
+        } else {
+            console.log('Player already has segments:', playerData.segments);
         }
         
         // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
@@ -731,6 +735,7 @@ class GameEngine {
             
             this.players.clear();
             for (const playerData of data.players) {
+                console.log('Received playerData for ID:', playerData.id, 'Segments:', playerData.segments);
                 this.players.set(playerData.id, playerData);
                 
                 // ИСПРАВЛЕНИЕ: Обновляем playerId если это наш игрок
