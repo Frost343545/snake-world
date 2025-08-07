@@ -3,39 +3,44 @@ class GameEngine {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.playerId = null;
-        
-        // Игровые объекты
-        this.players = new Map();
-        this.foods = new Map();
-        this.particles = [];
-        
-        // Игровые настройки
-        this.worldSize = { width: 10000, height: 10000 };
-        this.camera = { x: 0, y: 0, zoom: 1 };
-        this.mouse = { x: 0, y: 0 };
         
         // Игровое состояние
         this.isPlaying = false;
         this.isPaused = false;
-        this.gameStartTime = 0;
-        this.lastUpdateTime = 0;
-        
-        // Настройки рендеринга
-        this.gridSize = 50;
-        this.backgroundPattern = null;
-        
-        // Анимации
+        this.playerId = null;
+        this.players = new Map();
+        this.foods = new Map();
+        this.particles = [];
         this.animations = new Map();
+        
+        // Размеры мира (увеличено для большего количества игроков)
+        this.worldSize = { width: 10000, height: 10000 };
+        
+        // Камера
+        this.camera = { x: 0, y: 0, zoom: 1 };
+        this.centerX = 0;
+        this.centerY = 0;
+        
+        // Мышь
+        this.mouse = { x: 0, y: 0 };
+        
+        // Игровые настройки
+        this.snakeSpeed = 2.5; // Скорость движения змеи
+        this.boostSpeed = 4.0; // Скорость ускорения
+        this.boostConsumption = 0.1; // Потребление длины при ускорении
+        this.boostRegeneration = 0.05; // Восстановление длины
+        
+        // Гексагональная сетка
+        this.gridSize = 50;
+        this.gridOffset = 0;
         
         this.init();
     }
 
     init() {
         this.setupCanvas();
-        this.createBackgroundPattern();
         this.setupEventListeners();
-        this.startGameLoop();
+        this.createBackgroundPattern();
     }
 
     setupCanvas() {
@@ -48,145 +53,150 @@ class GameEngine {
         this.canvas.height = window.innerHeight;
         this.centerX = this.canvas.width / 2;
         this.centerY = this.canvas.height / 2;
+        console.log('Canvas resized:', this.canvas.width, 'x', this.canvas.height);
+        console.log('Center:', this.centerX, this.centerY);
     }
 
     createBackgroundPattern() {
+        // Создаем гексагональную сетку как в Slither.io
         const patternCanvas = document.createElement('canvas');
-        patternCanvas.width = this.gridSize;
-        patternCanvas.height = this.gridSize;
+        patternCanvas.width = this.gridSize * 2;
+        patternCanvas.height = this.gridSize * 2;
         const patternCtx = patternCanvas.getContext('2d');
         
-        // Создаем сетку
-        patternCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        // Рисуем гексагоны
+        patternCtx.strokeStyle = '#1a1a1a';
         patternCtx.lineWidth = 1;
-        patternCtx.beginPath();
-        patternCtx.moveTo(0, 0);
-        patternCtx.lineTo(this.gridSize, 0);
-        patternCtx.lineTo(this.gridSize, this.gridSize);
-        patternCtx.stroke();
+        
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                const x = i * this.gridSize;
+                const y = j * this.gridSize;
+                
+                // Рисуем гексагон
+                patternCtx.beginPath();
+                for (let k = 0; k < 6; k++) {
+                    const angle = (k * Math.PI) / 3;
+                    const hexX = x + this.gridSize/2 + Math.cos(angle) * this.gridSize/3;
+                    const hexY = y + this.gridSize/2 + Math.sin(angle) * this.gridSize/3;
+                    
+                    if (k === 0) {
+                        patternCtx.moveTo(hexX, hexY);
+                    } else {
+                        patternCtx.lineTo(hexX, hexY);
+                    }
+                }
+                patternCtx.closePath();
+                patternCtx.stroke();
+            }
+        }
         
         this.backgroundPattern = this.ctx.createPattern(patternCanvas, 'repeat');
     }
 
     setupEventListeners() {
-        // Обработка мыши
+        // Обработка движения мыши
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
         });
 
-        // Обработка клавиатуры
+        // Обработка касаний для мобильных устройств
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            this.mouse.x = touch.clientX - rect.left;
+            this.mouse.y = touch.clientY - rect.top;
+        });
+
+        // Обработка клавиш
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 this.handleBoost();
             } else if (e.code === 'Escape') {
+                e.preventDefault();
                 this.togglePause();
             }
         });
 
-        // Обработка касаний для мобильных устройств
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = touch.clientX - rect.left;
-            this.mouse.y = touch.clientY - rect.top;
-        });
-
-        this.canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = touch.clientX - rect.left;
-            this.mouse.y = touch.clientY - rect.top;
+        // Обработка клика для ускорения
+        this.canvas.addEventListener('click', (e) => {
+            this.handleBoost();
         });
     }
 
     startGame(playerData) {
         console.log('Starting game with player data:', playerData);
         
-        this.playerId = playerData.id;
-        this.isPlaying = true;
-        this.gameStartTime = Date.now();
-        this.lastUpdateTime = Date.now();
-        
-        // ИСПРАВЛЕНИЕ: Устанавливаем игрока в центр мира если координаты некорректные
+        // Проверяем границы мира
         if (playerData.x < 0 || playerData.x > this.worldSize.width || 
             playerData.y < 0 || playerData.y > this.worldSize.height) {
-            console.log('Исправляем позицию игрока - устанавливаем в центр мира');
             playerData.x = this.worldSize.width / 2;
             playerData.y = this.worldSize.height / 2;
         }
         
-        // Инициализируем начальные сегменты змеи
+        // Сбрасываем позицию мыши в центр
+        this.mouse.x = this.centerX;
+        this.mouse.y = this.centerY;
+        console.log('Mouse reset to center');
+        
+        // Добавляем игрока в коллекцию
+        this.players.set(playerData.id, playerData);
+        this.playerId = playerData.id;
+        
+        // Создаем начальные сегменты змеи
         if (!playerData.segments || playerData.segments.length === 0) {
             console.log('Creating new segments for player:', playerData.name);
             playerData.segments = [];
-            // Создаем начальные сегменты змеи (все в одной точке для начала)
             for (let i = 0; i < 3; i++) {
                 playerData.segments.push({
-                    x: playerData.x,
+                    x: playerData.x - i * 20,
                     y: playerData.y
                 });
             }
             console.log('Created segments:', playerData.segments);
         } else {
             console.log('Player already has segments:', playerData.segments);
-            // ИСПРАВЛЕНИЕ: Проверяем и исправляем сегменты с координатами (0,0)
-            for (let i = 0; i < playerData.segments.length; i++) {
-                const segment = playerData.segments[i];
+            // Исправляем сегменты с координатами (0,0)
+            for (let segment of playerData.segments) {
                 if (segment.x === 0 && segment.y === 0) {
-                    console.log('Fixing segment', i, 'with coordinates (0,0)');
                     segment.x = playerData.x;
                     segment.y = playerData.y;
                 }
             }
         }
         
-        // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
-        for (const segment of playerData.segments) {
+        // Проверяем границы для сегментов
+        for (let segment of playerData.segments) {
             if (segment.x < 0) segment.x = 0;
-            if (segment.y < 0) segment.y = 0;
             if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+            if (segment.y < 0) segment.y = 0;
             if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
         }
         
-        // Устанавливаем начальный радиус если его нет
-        if (!playerData.radius) {
-            playerData.radius = 15;
-        }
-        
-        // Добавляем игрока в коллекцию
-        this.players.set(playerData.id, playerData);
-        
-        // ИСПРАВЛЕНИЕ: Правильно устанавливаем камеру на игрока (упрощенная версия)
+        // Устанавливаем камеру на игрока
         this.camera.x = playerData.x - this.centerX;
         this.camera.y = playerData.y - this.centerY;
         
-        // Ограничиваем камеру в пределах мира при инициализации
+        // Проверяем границы камеры
         const maxX = this.worldSize.width - this.canvas.width;
         const maxY = this.worldSize.height - this.canvas.height;
         
-        this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
-        this.camera.y = Math.max(0, Math.min(maxY, this.camera.y));
+        if (this.camera.x < 0) this.camera.x = 0;
+        if (this.camera.x > maxX) this.camera.x = maxX;
+        if (this.camera.y < 0) this.camera.y = 0;
+        if (this.camera.y > maxY) this.camera.y = maxY;
         
-        // ИСПРАВЛЕНИЕ: Сбрасываем позицию мыши
-        this.mouse.x = this.centerX;
-        this.mouse.y = this.centerY;
+        this.isPlaying = true;
+        this.isPaused = false;
         
         console.log('Player added to collection, total players:', this.players.size);
         console.log('Game state - isPlaying:', this.isPlaying, 'isPaused:', this.isPaused);
-        console.log('Player segments:', playerData.segments.length);
-        console.log('Player position:', playerData.x, playerData.y);
-        console.log('Player ID set to:', this.playerId);
-        console.log('Player in collection with ID:', playerData.id);
-        console.log('Camera set to:', this.camera.x, this.camera.y);
-        console.log('Mouse reset to center:', this.mouse.x, this.mouse.y);
         
-        // Отправляем данные игрока на сервер
-        window.webSocketManager.sendPlayerJoin(playerData);
+        this.startGameLoop();
         
         console.log('Игра началась для игрока:', playerData.name);
     }
@@ -196,54 +206,41 @@ class GameEngine {
         this.players.clear();
         this.foods.clear();
         this.particles = [];
-        
-        if (this.playerId) {
-            window.webSocketManager.sendPlayerDisconnect();
-        }
-        
-        console.log('Игра остановлена');
+        this.animations.clear();
     }
 
     togglePause() {
-        this.isPaused = !this.isPaused;
-        if (window.uiManager) {
-            window.uiManager.togglePauseScreen(this.isPaused);
+        if (this.isPlaying) {
+            this.isPaused = !this.isPaused;
+            if (this.isPaused) {
+                window.uiManager.showPauseScreen();
+            } else {
+                window.uiManager.hidePauseScreen();
+            }
         }
     }
 
     pause() {
         this.isPaused = true;
-        if (window.uiManager) {
-            window.uiManager.showScreen('pause');
-        }
     }
 
     resume() {
         this.isPaused = false;
-        if (window.uiManager) {
-            window.uiManager.showScreen('game');
-        }
     }
 
     startGameLoop() {
         const gameLoop = (timestamp) => {
-            if (!this.lastUpdateTime) {
-                this.lastUpdateTime = timestamp;
-            }
-            
-            const deltaTime = timestamp - this.lastUpdateTime;
-            this.lastUpdateTime = timestamp;
-            
+            if (!this.lastTime) this.lastTime = timestamp;
+            const deltaTime = timestamp - this.lastTime;
+            this.lastTime = timestamp;
+
             if (this.isPlaying && !this.isPaused) {
                 this.update(deltaTime);
+                this.render();
             }
-            
-            this.render();
-            this.updateAnimations(deltaTime);
-            
+
             requestAnimationFrame(gameLoop);
         };
-        
         requestAnimationFrame(gameLoop);
     }
 
@@ -252,115 +249,122 @@ class GameEngine {
         const player = this.players.get(this.playerId);
         if (player) {
             this.updatePlayer(player, deltaTime);
-        } else {
-            console.warn('Player not found in collection, playerId:', this.playerId);
-            console.log('Available players in collection:');
-            for (const [id, p] of this.players) {
-                console.log('  -', id, ':', p.name);
-            }
+            this.updateSnakeSegments(player);
+            this.checkCollisions(player);
         }
-        
+
         // Обновляем частицы
         this.updateParticles(deltaTime);
-        
+
+        // Обновляем анимации
+        this.updateAnimations(deltaTime);
+
         // Обновляем UI
         this.updateUI();
     }
 
     updatePlayer(player, deltaTime) {
-        // ИСПРАВЛЕННАЯ ЛОГИКА: Убираем дёргание змеи
-        
-        // Получаем позицию курсора в мировых координатах
+        // Проверяем, движется ли мышь
+        if (this.mouse.x === this.centerX && this.mouse.y === this.centerY) {
+            return; // Мышь в центре, не двигаемся
+        }
+
+        // Вычисляем направление к мыши
         const worldMouseX = this.mouse.x + this.camera.x;
         const worldMouseY = this.mouse.y + this.camera.y;
         
-        // Вычисляем направление к курсору
         const dx = worldMouseX - player.x;
         const dy = worldMouseY - player.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // ИСПРАВЛЕНИЕ: Проверяем, что мышь действительно двигалась и не в центре
-        if (this.mouse.x === this.centerX && this.mouse.y === this.centerY) {
-            return; // Не двигаем игрока, если мышь в центре (не двигалась)
-        }
-        
-        // ИСПРАВЛЕНИЕ: Увеличиваем минимальное расстояние для движения
+
+        // Минимальное расстояние для движения
         if (distance < 10) {
-            return; // Не двигаемся, если курсор слишком близко
+            return;
         }
-        
-        // Нормализуем вектор направления
+
+        // Нормализуем направление
         const dirX = dx / distance;
         const dirY = dy / distance;
-        
-        // Вычисляем скорость движения
-        const speed = player.boost ? 300 : 150; // пикселей в секунду
-        const moveDistance = (speed * deltaTime) / 1000;
-        
-        // Двигаем игрока в направлении курсора
+
+        // Определяем скорость движения
+        const currentSpeed = player.boost ? this.boostSpeed : this.snakeSpeed;
+        const moveDistance = currentSpeed * (deltaTime / 16.67); // Нормализуем к 60 FPS
+
+        // Обновляем позицию головы
         player.x += dirX * moveDistance;
         player.y += dirY * moveDistance;
-        
-        // Ограничиваем игрока в пределах мира
-        player.x = Math.max(player.radius, Math.min(this.worldSize.width - player.radius, player.x));
-        player.y = Math.max(player.radius, Math.min(this.worldSize.height - player.radius, player.y));
-        
-        // Обновляем сегменты змеи
-        this.updateSnakeSegments(player);
-        
-        // Проверяем столкновения
-        this.checkCollisions(player);
-        
-        // Отправляем обновление на сервер
-        window.webSocketManager.sendPlayerMove({
-            x: player.x,
-            y: player.y,
-            boost: player.boost
-        });
-        
+
+        // Ограничиваем позицию границами мира
+        if (player.x < player.radius) player.x = player.radius;
+        if (player.x > this.worldSize.width - player.radius) player.x = this.worldSize.width - player.radius;
+        if (player.y < player.radius) player.y = this.worldSize.height - player.radius;
+        if (player.y > this.worldSize.height - player.radius) player.y = this.worldSize.height - player.radius;
+
         // Обновляем камеру
         this.updateCamera(player);
+
+        // Отправляем обновление на сервер
+        if (window.websocketManager && window.websocketManager.isConnected()) {
+            window.websocketManager.sendPlayerUpdate({
+                x: player.x,
+                y: player.y,
+                boost: player.boost
+            });
+        }
     }
 
     updateSnakeSegments(player) {
-        const segments = player.segments;
-        const segmentDistance = 20;
-        
-        // ИСПРАВЛЕНИЕ: Проверяем, что все сегменты находятся в пределах мира
-        for (const segment of segments) {
+        if (!player.segments || player.segments.length === 0) return;
+
+        // Проверяем границы для сегментов перед обновлением
+        for (let segment of player.segments) {
             if (segment.x < 0) segment.x = 0;
-            if (segment.y < 0) segment.y = 0;
             if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+            if (segment.y < 0) segment.y = 0;
             if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
         }
-        
-        // Обновляем позиции сегментов
-        for (let i = segments.length - 1; i > 0; i--) {
-            const current = segments[i];
-            const target = segments[i - 1];
+
+        // Обновляем сегменты (следование за головой)
+        for (let i = player.segments.length - 1; i > 0; i--) {
+            const current = player.segments[i];
+            const target = player.segments[i - 1];
             
             const dx = target.x - current.x;
             const dy = target.y - current.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance > segmentDistance) {
-                const moveDistance = distance - segmentDistance;
-                current.x += (dx / distance) * moveDistance;
-                current.y += (dy / distance) * moveDistance;
+            if (distance > 20) {
+                const moveDistance = distance - 20;
+                const dirX = dx / distance;
+                const dirY = dy / distance;
+                
+                current.x += dirX * moveDistance * 0.1;
+                current.y += dirY * moveDistance * 0.1;
             }
         }
-        
-        // Обновляем голову
-        if (segments.length > 0) {
-            segments[0].x = player.x;
-            segments[0].y = player.y;
+
+        // Первый сегмент следует за головой
+        if (player.segments.length > 0) {
+            const firstSegment = player.segments[0];
+            const dx = player.x - firstSegment.x;
+            const dy = player.y - firstSegment.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 20) {
+                const moveDistance = distance - 20;
+                const dirX = dx / distance;
+                const dirY = dy / distance;
+                
+                firstSegment.x += dirX * moveDistance * 0.1;
+                firstSegment.y += dirY * moveDistance * 0.1;
+            }
         }
-        
-        // ИСПРАВЛЕНИЕ: Еще раз проверяем границы после обновления
-        for (const segment of segments) {
+
+        // Проверяем границы для сегментов после обновления
+        for (let segment of player.segments) {
             if (segment.x < 0) segment.x = 0;
-            if (segment.y < 0) segment.y = 0;
             if (segment.x > this.worldSize.width) segment.x = this.worldSize.width;
+            if (segment.y < 0) segment.y = 0;
             if (segment.y > this.worldSize.height) segment.y = this.worldSize.height;
         }
     }
@@ -376,21 +380,22 @@ class GameEngine {
                 this.collectFood(foodId, food);
             }
         }
-        
+
         // Проверяем столкновения с другими игроками
         for (const [otherId, otherPlayer] of this.players) {
-            if (otherId === this.playerId) continue;
+            if (otherId === player.id) continue;
             
-            const dx = player.x - otherPlayer.x;
-            const dy = player.y - otherPlayer.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < player.radius + otherPlayer.radius) {
-                // Проверяем, кто кого съедает
-                if (player.radius > otherPlayer.radius * 1.1) {
+            // Проверяем столкновение головы с телом другого игрока
+            for (let i = 0; i < otherPlayer.segments.length; i++) {
+                const segment = otherPlayer.segments[i];
+                const dx = player.x - segment.x;
+                const dy = player.y - segment.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < player.radius + player.radius * 0.8) {
+                    // Игрок съел другого игрока
                     this.eatPlayer(otherId, otherPlayer);
-                } else if (otherPlayer.radius > player.radius * 1.1) {
-                    this.playerEaten(otherPlayer);
+                    break;
                 }
             }
         }
@@ -400,12 +405,12 @@ class GameEngine {
         // Увеличиваем размер игрока
         const player = this.players.get(this.playerId);
         if (player) {
-            player.radius += food.value * 0.1;
-            player.score += food.value;
+            player.radius += 0.5;
+            player.score += 10;
             
-            // Добавляем сегмент
-            const lastSegment = player.segments[player.segments.length - 1];
-            if (lastSegment) {
+            // Добавляем новый сегмент
+            if (player.segments.length > 0) {
+                const lastSegment = player.segments[player.segments.length - 1];
                 player.segments.push({
                     x: lastSegment.x,
                     y: lastSegment.y
@@ -418,27 +423,51 @@ class GameEngine {
         
         // Удаляем еду
         this.foods.delete(foodId);
+        
+        // Отправляем на сервер
+        if (window.websocketManager) {
+            window.websocketManager.sendFoodCollected(foodId);
+        }
     }
 
     eatPlayer(otherId, otherPlayer) {
-        // Увеличиваем размер игрока
         const player = this.players.get(this.playerId);
         if (player) {
-            player.radius += otherPlayer.radius * 0.1;
+            // Увеличиваем размер за счет съеденного игрока
+            const bonusSize = otherPlayer.radius * 0.5;
+            player.radius += bonusSize;
             player.score += otherPlayer.score;
             
-            // Создаем эффект поедания
+            // Добавляем сегменты от съеденного игрока
+            const segmentsToAdd = Math.floor(otherPlayer.segments.length * 0.3);
+            for (let i = 0; i < segmentsToAdd; i++) {
+                if (player.segments.length > 0) {
+                    const lastSegment = player.segments[player.segments.length - 1];
+                    player.segments.push({
+                        x: lastSegment.x,
+                        y: lastSegment.y
+                    });
+                }
+            }
+            
+            // Создаем эффект съедения игрока
             this.createPlayerEatenEffect(otherPlayer.x, otherPlayer.y, otherPlayer.color);
         }
         
         // Удаляем съеденного игрока
         this.players.delete(otherId);
+        
+        // Отправляем на сервер
+        if (window.websocketManager) {
+            window.websocketManager.sendPlayerEaten(otherId);
+        }
     }
 
     playerEaten(eater) {
         // Игрок был съеден
         this.createPlayerEatenEffect(this.players.get(this.playerId).x, this.players.get(this.playerId).y, this.players.get(this.playerId).color);
-        this.gameOver({ killedBy: eater.name });
+        this.stopGame();
+        window.uiManager.showGameOver();
     }
 
     createFoodCollectionEffect(x, y, color) {
@@ -451,10 +480,10 @@ class GameEngine {
                 y: y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                life: 1.0,
-                maxLife: 1.0,
                 color: color,
-                size: 3 + Math.random() * 3
+                size: 3 + Math.random() * 3,
+                life: 60,
+                maxLife: 60
             });
         }
     }
@@ -469,10 +498,10 @@ class GameEngine {
                 y: y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                life: 1.0,
-                maxLife: 1.5,
                 color: color,
-                size: 4 + Math.random() * 6
+                size: 4 + Math.random() * 4,
+                life: 90,
+                maxLife: 90
             });
         }
     }
@@ -483,7 +512,7 @@ class GameEngine {
             
             particle.x += particle.vx;
             particle.y += particle.vy;
-            particle.life -= deltaTime / 1000;
+            particle.life--;
             
             if (particle.life <= 0) {
                 this.particles.splice(i, 1);
@@ -492,29 +521,27 @@ class GameEngine {
     }
 
     updateCamera(player) {
-        // ИСПРАВЛЕНИЕ: Упрощенная логика камеры
-        // Вычисляем целевую позицию камеры (центрируем игрока на экране)
+        // Плавное следование камеры за игроком
         const targetX = player.x - this.centerX;
         const targetY = player.y - this.centerY;
         
-        // Ограничиваем камеру в пределах мира
+        const cameraSpeed = 0.1;
+        this.camera.x += (targetX - this.camera.x) * cameraSpeed;
+        this.camera.y += (targetY - this.camera.y) * cameraSpeed;
+        
+        // Ограничиваем камеру границами мира
         const maxX = this.worldSize.width - this.canvas.width;
         const maxY = this.worldSize.height - this.canvas.height;
         
-        const clampedTargetX = Math.max(0, Math.min(maxX, targetX));
-        const clampedTargetY = Math.max(0, Math.min(maxY, targetY));
-        
-        // Плавное следование камеры
-        const cameraSpeed = 0.1;
-        this.camera.x += (clampedTargetX - this.camera.x) * cameraSpeed;
-        this.camera.y += (clampedTargetY - this.camera.y) * cameraSpeed;
-        
-        console.log('Camera update - Player:', player.x, player.y, 'Target:', clampedTargetX, clampedTargetY, 'Camera:', this.camera.x, this.camera.y);
+        if (this.camera.x < 0) this.camera.x = 0;
+        if (this.camera.x > maxX) this.camera.x = maxX;
+        if (this.camera.y < 0) this.camera.y = 0;
+        if (this.camera.y > maxY) this.camera.y = maxY;
     }
 
     updateUI() {
         const player = this.players.get(this.playerId);
-        if (player && window.uiManager) {
+        if (player) {
             window.uiManager.updateScore(player.segments.length, player.score);
             window.uiManager.updatePlayersCount(this.players.size);
         }
@@ -522,40 +549,37 @@ class GameEngine {
 
     handleBoost() {
         const player = this.players.get(this.playerId);
-        if (player && player.segments.length > 10) {
+        if (player && player.segments.length > 3) {
             player.boost = true;
             
-            // Уменьшаем размер при ускорении
-            setTimeout(() => {
-                if (player.boost && player.segments.length > 5) {
-                    player.segments.pop();
-                    player.radius = Math.max(10, player.radius - 0.5);
-                }
-                player.boost = false;
-            }, 100);
+            // Уменьшаем длину при ускорении
+            if (player.segments.length > 3) {
+                player.segments.pop();
+            }
             
-            window.webSocketManager.sendPlayerBoost({ boost: true });
+            // Отправляем на сервер
+            if (window.websocketManager) {
+                window.websocketManager.sendBoost(true);
+            }
+            
+            // Сбрасываем ускорение через некоторое время
+            setTimeout(() => {
+                if (player) {
+                    player.boost = false;
+                    if (window.websocketManager) {
+                        window.websocketManager.sendBoost(false);
+                    }
+                }
+            }, 200);
         }
     }
 
     render() {
-        // Проверяем, что canvas существует и имеет размеры
-        if (!this.canvas || !this.ctx) {
-            console.error('Canvas or context not available');
-            return;
-        }
-        
-        if (this.canvas.width === 0 || this.canvas.height === 0) {
-            console.error('Canvas has zero dimensions');
-            return;
-        }
-        
+        // Очищаем канвас
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Сохраняем контекст
+        // Применяем трансформации камеры
         this.ctx.save();
-        
-        // Применяем трансформации камеры (упрощенная версия)
         this.ctx.translate(-this.camera.x, -this.camera.y);
         
         // Рендерим фон
@@ -570,25 +594,21 @@ class GameEngine {
         // Рендерим частицы
         this.renderParticles();
         
-        // Восстанавливаем контекст
         this.ctx.restore();
     }
 
     renderBackground() {
-        // Проверяем, что backgroundPattern существует
-        if (!this.backgroundPattern) {
-            console.warn('Background pattern not created, creating fallback');
-            this.createBackgroundPattern();
+        // Рендерим гексагональную сетку
+        if (this.backgroundPattern) {
+            this.ctx.fillStyle = this.backgroundPattern;
+            this.ctx.fillRect(0, 0, this.worldSize.width, this.worldSize.height);
         }
         
-        // Рендерим сетку
-        this.ctx.fillStyle = this.backgroundPattern;
+        // Добавляем темный фон
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         this.ctx.fillRect(0, 0, this.worldSize.width, this.worldSize.height);
         
-        // Рендерим границы мира
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(0, 0, this.worldSize.width, this.worldSize.height);
+        console.log('Background rendered, world size:', this.worldSize.width, 'x', this.worldSize.height);
     }
 
     renderFoods() {
@@ -608,10 +628,11 @@ class GameEngine {
             this.ctx.arc(food.x, food.y, food.radius, 0, Math.PI * 2);
             this.ctx.fill();
             
-            // Добавляем блик
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            // Добавляем свечение
+            this.ctx.shadowColor = food.color;
+            this.ctx.shadowBlur = 10;
             this.ctx.beginPath();
-            this.ctx.arc(food.x - food.radius * 0.3, food.y - food.radius * 0.3, food.radius * 0.3, 0, Math.PI * 2);
+            this.ctx.arc(food.x, food.y, food.radius * 0.5, 0, Math.PI * 2);
             this.ctx.fill();
             
             this.ctx.restore();
@@ -622,21 +643,28 @@ class GameEngine {
         console.log('=== РЕНДЕРИНГ ИГРОКОВ ===');
         console.log('Всего игроков в коллекции:', this.players.size);
         
-        for (const player of this.players.values()) {
-            console.log('Рендерим игрока:', player.name, 'ID:', player.id);
+        for (const [id, player] of this.players) {
+            console.log('Рендерим игрока:', player.name, 'ID:', id);
             console.log('Позиция игрока:', player.x, player.y);
             console.log('Сегменты:', player.segments.length);
             console.log('Радиус:', player.radius);
             console.log('Камера:', this.camera.x, this.camera.y);
             
-            // Проверяем, находится ли игрок в видимой области
             const screenX = player.x - this.camera.x;
             const screenY = player.y - this.camera.y;
             console.log('Позиция на экране:', screenX, screenY);
             console.log('Размеры экрана:', this.canvas.width, this.canvas.height);
             
-            this.renderPlayer(player);
+            // Проверяем, находится ли игрок в видимой области
+            if (screenX + player.radius > 0 && screenX - player.radius < this.canvas.width &&
+                screenY + player.radius > 0 && screenY - player.radius < this.canvas.height) {
+                
+                console.log('Начинаем рендеринг игрока:', player.name);
+                this.renderPlayer(player);
+            }
         }
+        
+        console.log('Render completed - Players:', this.players.size, 'Camera:', this.camera.x, this.camera.y, 'Player ID:', this.playerId);
     }
 
     renderPlayer(player) {
@@ -753,48 +781,64 @@ class GameEngine {
 
     // Методы для работы с сервером
     updateGameState(data) {
-        // Обновляем состояние игры с сервера
+        console.log('updateGameState called with:', data);
+        
         if (data.players) {
-            // Сохраняем текущего игрока перед очисткой
-            const currentPlayer = this.players.get(this.playerId);
+            console.log('Updating players, count:', data.players.length);
             
+            // Очищаем старых игроков
             this.players.clear();
+            
+            // Добавляем новых игроков
             for (const playerData of data.players) {
-                console.log('Received playerData for ID:', playerData.id, 'Segments:', playerData.segments);
+                console.log('Current player before update:', playerData.name);
                 
-                // ИСПРАВЛЕНИЕ: Проверяем и исправляем сегменты с координатами (0,0)
-                if (playerData.segments) {
-                    for (let i = 0; i < playerData.segments.length; i++) {
-                        const segment = playerData.segments[i];
-                        if (segment.x === 0 && segment.y === 0) {
-                            console.log('Fixing segment', i, 'with coordinates (0,0) in updateGameState');
-                            segment.x = playerData.x;
-                            segment.y = playerData.y;
-                        }
+                // Проверяем, есть ли у игрока сегменты
+                if (!playerData.segments || playerData.segments.length === 0) {
+                    playerData.segments = [
+                        { x: playerData.x, y: playerData.y },
+                        { x: playerData.x - 20, y: playerData.y },
+                        { x: playerData.x - 40, y: playerData.y }
+                    ];
+                }
+                
+                // Исправляем сегменты с координатами (0,0)
+                for (let segment of playerData.segments) {
+                    if (segment.x === 0 && segment.y === 0) {
+                        segment.x = playerData.x;
+                        segment.y = playerData.y;
                     }
                 }
                 
                 this.players.set(playerData.id, playerData);
+                console.log('Added player to collection:', playerData.id, playerData.name, 'at', playerData.x, playerData.y);
                 
-                // ИСПРАВЛЕНИЕ: Обновляем playerId если это наш игрок
-                if (currentPlayer && playerData.name === currentPlayer.name) {
-                    console.log('Обновляем playerId с', this.playerId, 'на', playerData.id);
+                // Обновляем playerId если это наш игрок
+                if (playerData.name === this.players.get(this.playerId)?.name) {
+                    console.log('Player ID updated from', this.playerId, 'to', playerData.id);
                     this.playerId = playerData.id;
                 }
             }
             
-            // ИСПРАВЛЕНИЕ: Если playerId не найден, но есть игроки, берем первого
-            if (!this.players.has(this.playerId) && this.players.size > 0) {
-                const firstPlayer = this.players.values().next().value;
-                console.log('PlayerId не найден, устанавливаем первого игрока:', firstPlayer.id);
-                this.playerId = firstPlayer.id;
-            }
+            console.log('Final player collection size:', this.players.size);
         }
         
         if (data.foods) {
             this.foods.clear();
-            for (const foodData of data.foods) {
-                this.foods.set(foodData.id, foodData);
+            for (const food of data.foods) {
+                this.foods.set(food.id, food);
+            }
+        }
+        
+        console.log('Received playerData for ID:', data.playerId, 'Segments:', data.segments);
+        
+        // Исправляем сегменты с координатами (0,0) если они пришли с сервера
+        if (data.segments) {
+            for (let segment of data.segments) {
+                if (segment.x === 0 && segment.y === 0) {
+                    segment.x = data.x || 0;
+                    segment.y = data.y || 0;
+                }
             }
         }
     }
@@ -816,19 +860,8 @@ class GameEngine {
     }
 
     gameOver(data) {
-        this.isPlaying = false;
-        
-        const player = this.players.get(this.playerId);
-        const survivalTime = Math.floor((Date.now() - this.gameStartTime) / 1000);
-        
-        if (window.uiManager) {
-            window.uiManager.showGameOver({
-                length: player ? player.segments.length : 0,
-                score: player ? player.score : 0,
-                survivalTime: survivalTime,
-                killedBy: data.killedBy
-            });
-        }
+        this.stopGame();
+        window.uiManager.showGameOver(data.finalScore, data.finalLength, data.killedBy);
     }
 }
 
